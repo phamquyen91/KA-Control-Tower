@@ -74,8 +74,13 @@ không can thiệp được.
 
 ## Deploy (Vercel)
 
-Next.js chạy trên Vercel không cần config thêm — import repo và deploy. Chỉ set
-biến môi trường khi app nguồn đổi domain:
+`vercel.json` đã pin `framework: nextjs`. Nếu để Vercel tự đoán và nó nhận nhầm
+thành static site, build sẽ chạy xong nhưng fail ở khâu thu output với lỗi
+`No Output Directory named "public" found` — Next.js xuất ra `.next`, không phải
+`public`. Trong Project Settings, **Output Directory phải để mặc định** (không bật
+override); override ở dashboard sẽ thắng phần suy luận từ framework.
+
+Ngoài ra không cần config gì thêm. Chỉ set biến môi trường khi app nguồn đổi domain:
 
 | Biến | Bắt buộc | Mặc định |
 | --- | --- | --- |
