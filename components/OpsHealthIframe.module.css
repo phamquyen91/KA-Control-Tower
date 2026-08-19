@@ -1,0 +1,49 @@
+.embed {
+  position: relative;
+  width: 100%;
+  /* Chỉ giữ một mức nhỏ để container không co về 0px trong lúc tải —
+     iframe-resizer sẽ set height thật theo nội dung ngay lần resize đầu. */
+  min-height: 400px;
+  overflow-x: hidden;
+}
+
+.iframe {
+  width: 100%;
+  min-height: 400px;
+  border: 0;
+  display: block;
+}
+
+.skeleton {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #f8f9fb;
+  color: var(--text-2);
+  font-size: 14px;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--orange);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .embed {
+    min-height: 100vh;
+  }
+}

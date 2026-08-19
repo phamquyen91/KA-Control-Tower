@@ -1,0 +1,100 @@
+.main {
+  margin-left: var(--sidebar-w);
+  padding: 22px 30px 60px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.topbar h1 {
+  font-size: 20px;
+  margin: 0;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.crumb {
+  font-size: 12px;
+  color: var(--text-3);
+  margin-bottom: 4px;
+}
+
+.toggles {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.freshbar {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  color: var(--text-2);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  margin: 14px 0 22px;
+}
+
+.freshbar span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ok {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+  flex-shrink: 0;
+}
+
+.freshNote {
+  color: var(--text-3);
+}
+
+.section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 18px;
+}
+
+.sectionTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sectionTitle h2 {
+  font-size: 15px;
+  margin: 0;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.note {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+@media (max-width: 900px) {
+  .main {
+    margin-left: 0;
+    padding: 18px 16px 48px;
+  }
+}

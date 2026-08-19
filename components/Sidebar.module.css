@@ -1,0 +1,168 @@
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-w);
+  background: linear-gradient(180deg, var(--orange) 0%, var(--orange-dark) 100%);
+  border-right: 1px solid var(--orange-dark);
+  padding: 20px 14px;
+  overflow-y: auto;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px 20px;
+}
+
+.logo {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: #fff;
+  color: var(--orange-dark);
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.brandName {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.brandSub {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.groupLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.75);
+  text-transform: uppercase;
+  padding: 0 10px;
+  margin-bottom: 8px;
+}
+
+.navblock {
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 10px 11px;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.head:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  flex-shrink: 0;
+}
+
+.chev {
+  margin-left: auto;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  transition: transform 0.18s ease;
+}
+
+.open .chev {
+  transform: rotate(90deg);
+}
+
+.activeBlock > .head {
+  background: #fff;
+  color: var(--orange-dark);
+}
+
+.activeBlock > .head .dot {
+  background: var(--orange);
+}
+
+.activeBlock > .head .chev {
+  color: var(--orange-dark);
+}
+
+.children {
+  max-height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  transition: max-height 0.22s ease, visibility 0.22s ease;
+}
+
+.open .children {
+  max-height: 220px;
+  visibility: visible;
+}
+
+.subitem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 11px 8px 28px;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.85);
+  background: transparent;
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  text-align: left;
+}
+
+.subitem:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.subitem .dot {
+  width: 5px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.subActive {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-weight: 700;
+}
+
+.subActive .dot {
+  background: #fff;
+}
+
+.meta {
+  padding: 10px 10px 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.75);
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  margin-top: 8px;
+}
