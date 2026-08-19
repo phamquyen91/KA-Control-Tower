@@ -72,6 +72,31 @@ không can thiệp được.
 > placeholder. Chạy local sẽ bị chặn và tab hiện panel cảnh báo. Cần gửi team KAS
 > domain thật (và `http://localhost:3000` nếu muốn dev local nhúng được).
 
+## Deploy (Vercel)
+
+Next.js chạy trên Vercel không cần config thêm — import repo và deploy. Chỉ set
+biến môi trường khi app nguồn đổi domain:
+
+| Biến | Bắt buộc | Mặc định |
+| --- | --- | --- |
+| `NEXT_PUBLIC_KAS_ORIGIN` | Không | `https://kas-shopee-performance.vercel.app` |
+
+### Domain cần gửi team KAS khai báo `frame-ancestors`
+
+Vercel sinh nhiều loại domain, và CSP phải liệt kê **từng** domain muốn nhúng được:
+
+| Loại | Dạng | Ghi chú |
+| --- | --- | --- |
+| Production | `https://<project>.vercel.app` | Ổn định — bắt buộc phải whitelist |
+| Preview theo branch | `https://<project>-git-<branch>-<scope>.vercel.app` | Ổn định theo branch |
+| Preview theo commit | `https://<project>-<hash>-<scope>.vercel.app` | Đổi mỗi lần deploy — không whitelist nổi |
+| Dev local | `http://localhost:3000` | Chỉ thêm nếu muốn dev local nhúng được |
+
+Preview theo commit đổi URL liên tục nên đừng cố whitelist; test nhúng trên
+production hoặc trên preview-theo-branch. Nếu về sau gắn custom domain GHN thì
+phải báo KAS bổ sung tiếp — CSP không hỗ trợ wildcard kiểu `*.vercel.app` một
+cách an toàn.
+
 ## Cấu trúc
 
 ```
