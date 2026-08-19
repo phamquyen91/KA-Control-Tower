@@ -8,6 +8,7 @@
   border-right: 1px solid var(--orange-dark);
   padding: 20px 14px;
   overflow-y: auto;
+  z-index: 40;
 }
 
 .brand {
@@ -165,4 +166,28 @@
   color: rgba(255, 255, 255, 0.75);
   border-top: 1px solid rgba(255, 255, 255, 0.25);
   margin-top: 8px;
+}
+
+/* <=900px: sidebar thành off-canvas drawer, mở bằng nút hamburger ở topbar. */
+@media (max-width: 900px) {
+  .sidebar {
+    width: min(var(--sidebar-w), 82vw);
+    transform: translateX(-100%);
+    /* visibility: giữ drawer ngoài tab order + a11y tree khi đang đóng,
+       nếu không focus bàn phím sẽ lọt vào menu vô hình. */
+    visibility: hidden;
+    transition: transform 0.22s ease, visibility 0.22s ease;
+    box-shadow: 0 0 24px rgba(0, 0, 0, 0.18);
+  }
+
+  .drawerOpen {
+    transform: translateX(0);
+    visibility: visible;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar {
+    transition: none;
+  }
 }

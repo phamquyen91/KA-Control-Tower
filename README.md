@@ -43,6 +43,11 @@ Cơ chế đồng bộ với app nguồn:
 - **Chiều cao**: dùng `iframe-resizer` **4.x (MIT)** phía parent. App nguồn đã
   nhúng sẵn script phía child. Container chỉ giữ `min-height: 400px` để không co
   về 0px trước lần resize đầu — không set cứng chiều cao lớn.
+- **Khi nhúng không lên được**: nếu sau `HANDSHAKE_TIMEOUT_MS` (6s) mà child của
+  `iframe-resizer` chưa bắt tay, component hiện panel cảnh báo thay cho màn hình
+  trắng câm — nêu nguyên nhân, in ra đúng origin cần whitelist, kèm nút mở báo
+  cáo ở tab mới. Panel hiện **phía trên** iframe chứ không thay thế, nên nếu báo
+  cáo thực tế vẫn render (chỉ thiếu script child) thì người dùng không mất nội dung.
 
 > `iframe-resizer` phải giữ ở bản 4.x. Từ bản 5 trở đi package đổi sang giấy phép
 > GPL-3.0/thương mại, không dùng nội bộ được khi chưa mua license.
@@ -62,6 +67,11 @@ App nguồn phải khai báo `frame-ancestors` trong CSP cho domain thật của
 Tower thì trình duyệt mới cho nhúng. Đây là việc bên KAS làm, phía Control Tower
 không can thiệp được.
 
+> **Trạng thái hiện tại:** CSP của app nguồn đang là
+> `frame-ancestors 'self' https://control-tower.example.com` — mới chỉ có domain
+> placeholder. Chạy local sẽ bị chặn và tab hiện panel cảnh báo. Cần gửi team KAS
+> domain thật (và `http://localhost:3000` nếu muốn dev local nhúng được).
+
 ## Cấu trúc
 
 ```
@@ -75,3 +85,9 @@ components/
 lib/                    cấu hình tab và nội dung placeholder
 types/                  khai báo type cho iframe-resizer 4.x
 ```
+
+## Responsive
+
+Từ `max-width: 900px` sidebar chuyển thành off-canvas drawer, mở bằng nút
+hamburger ở topbar, đóng bằng backdrop hoặc khi chọn xong một tab. Lúc đóng
+drawer dùng `visibility: hidden` để không lọt focus bàn phím vào menu vô hình.

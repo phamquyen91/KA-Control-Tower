@@ -25,21 +25,51 @@ export default function ControlTower({ userEmail }: { userEmail: string }) {
   const [activeTab, setActiveTab] = useState<TabId>("biz");
   const [dataScope, setDataScope] = useState<DataScope>("SPB");
   const [dataPeriod, setDataPeriod] = useState<DataPeriod>("day");
+  // Drawer chỉ có tác dụng <=900px; desktop sidebar luôn hiện.
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  function handleSelectTab(tab: TabId) {
+    setActiveTab(tab);
+    setIsDrawerOpen(false);
+  }
 
   return (
     <>
       <Sidebar
         activeTab={activeTab}
-        onSelectTab={setActiveTab}
+        onSelectTab={handleSelectTab}
         scope={dataScope}
         userEmail={userEmail}
+        isDrawerOpen={isDrawerOpen}
       />
+
+      {isDrawerOpen && (
+        <button
+          type="button"
+          className={styles.backdrop}
+          aria-label="Đóng menu điều hướng"
+          onClick={() => setIsDrawerOpen(false)}
+        />
+      )}
 
       <main className={styles.main}>
         <div className={styles.topbar}>
-          <div>
-            <div className={styles.crumb}>Control Tower / Shopee Account</div>
-            <h1>{TAB_TITLES[activeTab]}</h1>
+          <div className={styles.titleGroup}>
+            <button
+              type="button"
+              className={styles.menuBtn}
+              aria-label="Mở menu điều hướng"
+              aria-expanded={isDrawerOpen}
+              onClick={() => setIsDrawerOpen((v) => !v)}
+            >
+              <span />
+              <span />
+              <span />
+            </button>
+            <div>
+              <div className={styles.crumb}>Control Tower / Shopee Account</div>
+              <h1>{TAB_TITLES[activeTab]}</h1>
+            </div>
           </div>
           <div className={styles.toggles}>
             <Toggle

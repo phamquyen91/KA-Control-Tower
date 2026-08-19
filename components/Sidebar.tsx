@@ -9,6 +9,8 @@ interface SidebarProps {
   onSelectTab: (tab: TabId) => void;
   scope: DataScope;
   userEmail: string;
+  /** Mở drawer trên mobile (<=900px). Trên desktop sidebar luôn hiện. */
+  isDrawerOpen: boolean;
 }
 
 export default function Sidebar({
@@ -16,11 +18,16 @@ export default function Sidebar({
   onSelectTab,
   scope,
   userEmail,
+  isDrawerOpen,
 }: SidebarProps) {
   const [expanded, setExpanded] = useState<string | null>("cskh");
 
   return (
-    <nav className={styles.sidebar}>
+    <nav
+      className={[styles.sidebar, isDrawerOpen ? styles.drawerOpen : ""]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <div className={styles.brand}>
         <div className={styles.logo}>GHN</div>
         <div>

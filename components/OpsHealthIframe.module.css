@@ -47,3 +47,50 @@
     min-height: 100vh;
   }
 }
+
+/* Fallback khi iframe không bắt tay được (thường do CSP frame-ancestors). */
+.notice {
+  margin: 0 0 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--warning);
+  border-left-width: 4px;
+  border-radius: 8px;
+  background: var(--warning-tint);
+}
+
+.noticeTitle {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.noticeBody {
+  margin: 0 0 6px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-2);
+}
+
+.noticeBody code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.06);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.noticeLink {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 7px 14px;
+  border-radius: 6px;
+  background: var(--orange);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.noticeLink:hover {
+  background: var(--orange-dark);
+}
