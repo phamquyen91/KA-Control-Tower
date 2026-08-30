@@ -2,11 +2,17 @@
   overflow-x: auto;
 }
 
+/* Bọc SVG để tooltip (HTML) định vị theo chart. */
+.frame {
+  position: relative;
+  min-width: 520px;
+}
+
 .svg {
   display: block;
   width: 100%;
-  min-width: 520px;
   height: auto;
+  touch-action: pan-y;
 }
 
 .grid {
@@ -53,18 +59,22 @@
 /* Bảng màu dùng chung cho cột và đường — component cha chỉ chọn tên lớp. */
 .barPrimary {
   fill: var(--blue);
+  color: var(--blue);
 }
 
 .barSecondary {
   fill: var(--orange);
+  color: var(--orange);
 }
 
 .barLow {
   fill: #7aa2c9;
+  color: #7aa2c9;
 }
 
 .barHigh {
   fill: var(--blue);
+  color: var(--blue);
 }
 
 .lineTotal {
@@ -80,4 +90,101 @@
 .lineHigh {
   stroke: var(--success);
   color: var(--success);
+}
+
+/* ---- Tương tác ---- */
+
+.hit {
+  fill: transparent;
+  cursor: pointer;
+  outline: none;
+}
+
+.hit:focus-visible {
+  fill: rgba(14, 65, 116, 0.06);
+}
+
+.activeBand {
+  fill: rgba(14, 65, 116, 0.06);
+  pointer-events: none;
+}
+
+.axisLabelActive {
+  fill: var(--text);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.tooltip {
+  position: absolute;
+  top: 8px;
+  transform: translateX(-50%);
+  z-index: 2;
+  min-width: 172px;
+  max-width: 250px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--card);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.13);
+  font-size: 11.5px;
+  pointer-events: none;
+}
+
+.tipTitle {
+  font-weight: 900;
+  font-size: 12px;
+  color: var(--text);
+  margin-bottom: 6px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tipRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 0;
+  color: var(--text-2);
+}
+
+.tipRow b {
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.tipKey {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tipTotal {
+  margin-top: 3px;
+  padding-top: 5px;
+  border-top: 1px solid var(--border);
+  font-weight: 700;
+}
+
+.tipSwatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  /* Ô màu dùng lại đúng lớp màu của cột, vốn khai bằng `fill` cho SVG —
+     nên ở đây lấy màu qua background của chính thuộc tính fill không được;
+     dùng currentColor từ `color` của lớp màu. */
+  background: currentColor;
+}
+
+.tipDash {
+  width: 14px;
+  height: 0;
+  flex-shrink: 0;
+  border-top: 2px solid currentColor;
+}
+
+.tipDash[data-dashed] {
+  border-top-style: dashed;
 }

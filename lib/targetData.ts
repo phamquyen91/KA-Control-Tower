@@ -1,5 +1,7 @@
+import "server-only";
+
 import type { DataScope } from "./tabs";
-import type { WeightBand } from "./bizData";
+import type { WeightBand } from "./labels";
 
 // Hai loại mục tiêu, KHÁC NHAU về ý nghĩa — đừng dùng lẫn:
 //  - FC  : sản lượng dự báo SPE gửi GHN hằng tháng, đối chiếu với CREATED.

@@ -25,6 +25,42 @@ Mở http://localhost:3000.
 
 Các tab placeholder liệt kê sẵn nội dung dự kiến để triển khai sau.
 
+## Phân quyền tab "Tình hình kinh doanh"
+
+Tab này chứa số liệu kinh doanh nên chỉ mở cho một số tài khoản. Cơ chế:
+
+1. **Đăng nhập Google** qua Auth.js (`auth.ts`). Callback `signIn` chặn ngay ở
+   bước đăng nhập — email ngoài allowlist không tạo được session.
+2. **Số liệu không nằm trong bundle client.** `lib/bizData.ts`,
+   `lib/targetData.ts`, `lib/bizMetrics.ts` đều đánh dấu `server-only`, build sẽ
+   fail nếu có component client lỡ import. Giao diện lấy số qua `GET /api/biz`,
+   route đó kiểm tra session **và** allowlist trước khi trả dữ liệu.
+
+Đây là điểm khiến nó là bảo mật thật chứ không phải tấm rèm: nếu dữ liệu vẫn
+nằm trong bundle thì màn hình đăng nhập chỉ che mắt, mở DevTools là đọc được.
+Kiểm chứng sau mỗi lần build:
+
+```bash
+grep -rl "13887419" .next/static | wc -l   # phải ra 0
+```
+
+Sửa danh sách email ở `lib/allowlist.ts`, hoặc đặt biến `BIZ_ALLOWED_EMAILS`
+(các email cách nhau dấu phẩy) để đổi mà không cần sửa code.
+
+### Biến môi trường bắt buộc
+
+Xem `.env.example`. Thiếu các biến này thì tab kinh doanh báo lỗi tải, các tab
+còn lại vẫn chạy bình thường.
+
+| Biến | Lấy ở đâu |
+| --- | --- |
+| `AUTH_SECRET` | `npx auth secret` |
+| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | Google Cloud Console → Credentials → OAuth client (Web application) |
+
+Redirect URI phải khai đủ cả hai:
+`http://localhost:3000/api/auth/callback/google` và
+`https://ka-control-tower.vercel.app/api/auth/callback/google`.
+
 ## Mục tiêu: FC và AOP
 
 Hai loại mục tiêu khác nhau về ý nghĩa, đừng dùng lẫn:

@@ -1,27 +1,14 @@
+import "server-only";
+
 import type { DataScope } from "./tabs";
+import type { Lane, WeightBand } from "./labels";
 
-// Nguồn: Google Sheet "tower control raw", tab `raw_1`.
-// https://docs.google.com/spreadsheets/d/1WI5CrcFrTgDR4FNS8Un9RR-oHEvkdJWCj8OUTc2BFtk/edit?gid=1213160480
+// SỐ LIỆU NHẠY CẢM — module này đánh dấu `server-only`, build sẽ fail nếu có
+// component client lỡ import vào. Giao diện lấy số qua /api/biz, route đó kiểm
+// tra đăng nhập và allowlist trước khi trả dữ liệu.
 //
-// Dữ liệu để ở dạng snapshot tĩnh, KHÔNG fetch trực tiếp lúc chạy: sheet này
-// không công khai (truy cập ẩn danh trả 401), nên fetch từ trình duyệt sẽ dính
-// đúng vấn đề mà app kas-shopee-performance đang gặp — Google trả 403 cho tài
-// khoản không có quyền và người dùng thấy trang lỗi của Google.
-// Cách cập nhật: xuất lại tab `raw_1` ra CSV rồi sinh lại file này.
-export const BIZ_SOURCE_SHEET_ID = "1WI5CrcFrTgDR4FNS8Un9RR-oHEvkdJWCj8OUTc2BFtk";
-export const BIZ_SOURCE_GID = "1213160480";
-export const BIZ_SOURCE_URL = `https://docs.google.com/spreadsheets/d/${BIZ_SOURCE_SHEET_ID}/edit?gid=${BIZ_SOURCE_GID}`;
-
-// modifiedTime của sheet lúc lấy snapshot.
-export const BIZ_SNAPSHOT_AT = "2026-08-19";
-
-export type Lane =
-  | "Intra City"
-  | "Intra Region"
-  | "Cross Region"
-  | "Cross Metro";
-
-export type WeightBand = "<15kg" | ">=15kg";
+// Nguồn: Google Sheet "tower control raw", tab `raw tab 1`.
+// Cách cập nhật: xuất lại tab đó ra CSV rồi sinh lại file này.
 
 export interface BizRow {
   month: string;
@@ -31,16 +18,6 @@ export interface BizRow {
   created: number;
   gtc: number;
 }
-
-// Thứ tự lane từ gần tới xa — dùng cho mọi bảng để đọc nhất quán.
-export const LANE_ORDER: Lane[] = [
-  "Intra City",
-  "Intra Region",
-  "Cross Region",
-  "Cross Metro",
-];
-
-export const WEIGHT_ORDER: WeightBand[] = ["<15kg", ">=15kg"];
 
 type RawTuple = [string, DataScope, Lane, WeightBand, number, number];
 
@@ -190,22 +167,3 @@ export const BIZ_ROWS: BizRow[] = RAW.map(
 export const BIZ_MONTHS: string[] = [
   ...new Set(BIZ_ROWS.map((r) => r.month)),
 ].sort();
-
-/**
- * Nhãn hiển thị của client. "Shopee Standard" là tên gọi thống nhất trên giao
- * diện — trong dữ liệu nguồn nó là "Shopee Express", đổi tên để không lẫn với
- * client khác.
- */
-export const SCOPE_LABEL: Record<DataScope, string> = {
-  SPB: "Shopee Bulky",
-  SPE: "Shopee Standard",
-};
-
-/**
- * Nhãn nhóm trọng lượng đọc theo scope: với Bulky đơn nhẹ nhất đã là 10kg nên
- * "<15kg" thực chất là 10–15kg.
- */
-export function bandLabel(band: WeightBand, scope: DataScope) {
-  if (scope === "SPB") return band === "<15kg" ? "10–15kg" : "15kg++";
-  return band === "<15kg" ? "<15kg" : "≥15kg";
-}

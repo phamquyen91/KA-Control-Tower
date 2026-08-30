@@ -1,32 +1,24 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { signIn } from "next-auth/react";
 import {
-  BIZ_MONTHS,
   BIZ_SNAPSHOT_AT,
   BIZ_SOURCE_URL,
   LANE_ORDER,
   SCOPE_LABEL,
   WEIGHT_ORDER,
   bandLabel,
-} from "@/lib/bizData";
+} from "@/lib/labels";
 import {
-  aopCompletion,
-  bandShareByMonth,
-  fcCompletion,
   formatMonth,
   formatMonthShort,
   formatNumber,
   formatPercent,
-  laneShareByMonth,
-  monthlyByBand,
-  scopeProgress,
-  type ScopeProgress,
-} from "@/lib/bizMetrics";
+} from "@/lib/format";
+import type { BizPayload, ScopePayload } from "@/lib/bizViewModel";
 import type { DataScope } from "@/lib/tabs";
-import VolumeChart, {
-  type BarSegment,
-  type LineSeries,
-} from "./VolumeChart";
+import VolumeChart, { type BarSegment, type LineSeries } from "./VolumeChart";
 import chart from "./VolumeChart.module.css";
 import styles from "./BizOverview.module.css";
 
@@ -34,30 +26,173 @@ import styles from "./BizOverview.module.css";
 // mức hoàn thành của tháng đó đều thấp hơn thực tế.
 const SNAPSHOT_LABEL = "19/08/2026";
 
-const LATEST_MONTH = BIZ_MONTHS[BIZ_MONTHS.length - 1];
+type LoadState =
+  | { status: "loading" }
+  | { status: "unauthenticated" }
+  | { status: "forbidden"; email?: string }
+  | { status: "error"; message: string }
+  | { status: "ready"; payload: BizPayload };
 
 export default function BizOverview() {
+  const [state, setState] = useState<LoadState>({ status: "loading" });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    // Số liệu không nằm sẵn trong bundle: phải hỏi /api/biz, nơi kiểm tra
+    // đăng nhập và allowlist trước khi trả về.
+    fetch("/api/biz")
+      .then(async (res) => {
+        if (cancelled) return;
+        if (res.status === 401) return setState({ status: "unauthenticated" });
+        if (res.status === 403) {
+          const body = await res.json().catch(() => ({}));
+          return setState({ status: "forbidden", email: body?.email });
+        }
+        if (!res.ok) {
+          return setState({
+            status: "error",
+            message: `Máy chủ trả lỗi ${res.status}.`,
+          });
+        }
+        setState({ status: "ready", payload: (await res.json()) as BizPayload });
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setState({
+            status: "error",
+            message: err instanceof Error ? err.message : "Không gọi được API.",
+          });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (state.status === "loading") return <Gate variant="loading" />;
+  if (state.status === "unauthenticated") return <Gate variant="signin" />;
+  if (state.status === "forbidden")
+    return <Gate variant="forbidden" email={state.email} />;
+  if (state.status === "error")
+    return <Gate variant="error" message={state.message} />;
+
+  const { payload } = state;
+  const latestMonth = payload.months[payload.months.length - 1];
+
   return (
     <div className={styles.page}>
-      <Section title="Tổng quan" subtitle={`GTTC so với AOP · ${formatMonth(LATEST_MONTH)}`}>
+      <Section
+        title="Tổng quan"
+        subtitle={`GTTC so với AOP · ${formatMonth(latestMonth)}`}
+      >
         <div className={styles.overviewGrid}>
-          <ProgressPanel scope="SPB" />
-          <ProgressPanel scope="SPE" />
+          <ProgressPanel scope="SPB" data={payload.scopes.SPB} />
+          <ProgressPanel scope="SPE" data={payload.scopes.SPE} />
         </div>
       </Section>
 
-      <Section
-        title="Sản lượng tháng"
-        subtitle="Created so FC · GTTC so AOP"
-      >
-        <div className={styles.splitGrid}>
-          <ScopeColumn scope="SPB" />
-          <ScopeColumn scope="SPE" />
+      <Section title="Sản lượng tháng" subtitle="Created so FC · GTTC so AOP">
+        <div className={styles.matrix}>
+          <ScopeHeading scope="SPB" />
+          <ScopeHeading scope="SPE" />
+
+          <ChartRow kind="created" payload={payload} />
+          <ChartRow kind="gtc" payload={payload} />
+          <ChartRow kind="lane" payload={payload} />
+          <ChartRow kind="band" payload={payload} />
         </div>
       </Section>
+
+      <p className={styles.footnote}>
+        Nguồn:{" "}
+        <a href={BIZ_SOURCE_URL} target="_blank" rel="noopener noreferrer">
+          tower control raw · raw tab 1 ↗
+        </a>{" "}
+        · snapshot {BIZ_SNAPSHOT_AT}. Số liệu chốt tới <b>{SNAPSHOT_LABEL}</b>{" "}
+        nên {formatMonth(latestMonth)} chưa đủ tháng — sản lượng MTD và mức hoàn
+        thành của tháng này đều thấp hơn thực tế. FC đối chiếu với Created, AOP
+        đối chiếu với GTTC.
+      </p>
     </div>
   );
 }
+
+/* ------------------------- Cổng kiểm soát truy cập ------------------------- */
+
+function Gate({
+  variant,
+  email,
+  message,
+}: {
+  variant: "loading" | "signin" | "forbidden" | "error";
+  email?: string;
+  message?: string;
+}) {
+  if (variant === "loading") {
+    return (
+      <div className={styles.gate} role="status" aria-live="polite">
+        <div className={styles.gateSpinner} />
+        <p className={styles.gateText}>Đang tải số liệu…</p>
+      </div>
+    );
+  }
+
+  if (variant === "signin") {
+    return (
+      <div className={styles.gate}>
+        <h2 className={styles.gateTitle}>Cần đăng nhập</h2>
+        <p className={styles.gateText}>
+          Tab này chứa số liệu kinh doanh nên chỉ mở cho một số tài khoản được
+          cấp quyền. Đăng nhập bằng tài khoản Google công ty để xem.
+        </p>
+        <button
+          type="button"
+          className={styles.gateBtn}
+          onClick={() => signIn("google")}
+        >
+          Đăng nhập bằng Google
+        </button>
+      </div>
+    );
+  }
+
+  if (variant === "forbidden") {
+    return (
+      <div className={styles.gate}>
+        <h2 className={styles.gateTitle}>Tài khoản chưa được cấp quyền</h2>
+        <p className={styles.gateText}>
+          {email ? (
+            <>
+              Tài khoản <code>{email}</code> không nằm trong danh sách được xem
+              tab này.
+            </>
+          ) : (
+            "Tài khoản đang đăng nhập không nằm trong danh sách được xem tab này."
+          )}{" "}
+          Liên hệ người quản trị Control Tower để được bổ sung.
+        </p>
+        <button
+          type="button"
+          className={styles.gateBtnGhost}
+          onClick={() => signIn("google")}
+        >
+          Đăng nhập bằng tài khoản khác
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.gate}>
+      <h2 className={styles.gateTitle}>Không tải được số liệu</h2>
+      <p className={styles.gateText}>{message}</p>
+    </div>
+  );
+}
+
+/* --------------------------------- Khung --------------------------------- */
 
 function Section({
   title,
@@ -79,10 +214,15 @@ function Section({
   );
 }
 
-/* ------------------------------- Phần 1 -------------------------------- */
+/* -------------------------------- Phần 1 --------------------------------- */
 
-function ProgressPanel({ scope }: { scope: DataScope }) {
-  const progress = scopeProgress(scope);
+function ProgressPanel({
+  scope,
+  data,
+}: {
+  scope: DataScope;
+  data: ScopePayload;
+}) {
   return (
     <div className={styles.panel}>
       <div className={styles.panelHead}>
@@ -90,8 +230,16 @@ function ProgressPanel({ scope }: { scope: DataScope }) {
         <h3>{SCOPE_LABEL[scope]}</h3>
       </div>
       <div className={styles.statRow}>
-        <StatCard title="GTTC YTD" stat={progress.ytd} spark={progress.spark} />
-        <StatCard title="GTTC MTD" stat={progress.mtd} spark={progress.spark} />
+        <StatCard
+          title="GTTC YTD"
+          stat={data.progress.ytd}
+          spark={data.progress.spark}
+        />
+        <StatCard
+          title="GTTC MTD"
+          stat={data.progress.mtd}
+          spark={data.progress.spark}
+        />
       </div>
     </div>
   );
@@ -103,7 +251,7 @@ function StatCard({
   spark,
 }: {
   title: string;
-  stat: ScopeProgress["ytd"];
+  stat: ScopePayload["progress"]["ytd"];
   spark: number[];
 }) {
   const ok = stat.completion >= 1;
@@ -155,161 +303,139 @@ function Sparkline({ values, ok }: { values: number[]; ok: boolean }) {
   );
 }
 
-/* ------------------------------- Phần 2 -------------------------------- */
+/* -------------------------------- Phần 2 --------------------------------- */
 
-function ScopeColumn({ scope }: { scope: DataScope }) {
-  const stacked = scope === "SPB";
-  const points = monthlyByBand(scope);
-
-  const createdBars: BarSegment[][] = points.map((p) =>
-    stacked
-      ? p.bands.map((b) => ({
-          key: b.band,
-          label: bandLabel(b.band, scope),
-          value: b.created,
-          className: b.band === "<15kg" ? chart.barLow : chart.barHigh,
-        }))
-      : [
-          {
-            key: "total",
-            label: "Created",
-            value: p.created,
-            className: chart.barPrimary,
-          },
-        ],
-  );
-
-  const gtcBars: BarSegment[][] = points.map((p) =>
-    stacked
-      ? p.bands.map((b) => ({
-          key: b.band,
-          label: bandLabel(b.band, scope),
-          value: b.gtc,
-          className: b.band === "<15kg" ? chart.barLow : chart.barHigh,
-        }))
-      : [
-          {
-            key: "total",
-            label: "GTTC",
-            value: p.gtc,
-            className: chart.barSecondary,
-          },
-        ],
-  );
-
-  const createdLines: LineSeries[] = [
-    {
-      key: "fc-total",
-      label: "Tổng vs FC",
-      dashed: false,
-      className: chart.lineTotal,
-      values: points.map(
-        (p) => fcCompletion(scope, p.month, p.created) ?? null,
-      ),
-    },
-    ...(stacked
-      ? WEIGHT_ORDER.map((band) => ({
-          key: `fc-${band}`,
-          label: `${bandLabel(band, scope)} vs FC`,
-          dashed: true,
-          className: band === "<15kg" ? chart.lineLow : chart.lineHigh,
-          values: points.map((p) => {
-            const cell = p.bands.find((b) => b.band === band);
-            return cell
-              ? (fcCompletion(scope, p.month, cell.created, band) ?? null)
-              : null;
-          }),
-        }))
-      : []),
-  ];
-
-  const gtcLines: LineSeries[] = [
-    {
-      key: "aop-total",
-      label: "Tổng vs AOP",
-      dashed: false,
-      className: chart.lineTotal,
-      values: points.map((p) => aopCompletion(scope, p.month, p.gtc) ?? null),
-    },
-    ...(stacked
-      ? WEIGHT_ORDER.map((band) => ({
-          key: `aop-${band}`,
-          label: `${bandLabel(band, scope)} vs AOP`,
-          dashed: true,
-          className: band === "<15kg" ? chart.lineLow : chart.lineHigh,
-          values: points.map((p) => {
-            const cell = p.bands.find((b) => b.band === band);
-            return cell
-              ? (aopCompletion(scope, p.month, cell.gtc, band) ?? null)
-              : null;
-          }),
-        }))
-      : []),
-  ];
-
-  const missingFc = createdLines[0].values.some((v) => v === null);
-
+function ScopeHeading({ scope }: { scope: DataScope }) {
   return (
-    <div className={styles.column}>
-      <div className={styles.panelHead}>
-        <span className={styles.panelBar} />
-        <h3>{SCOPE_LABEL[scope]}</h3>
-      </div>
-
-      <ChartCard
-        title="Created Volume"
-        note="Cột: sản lượng Created · Đường: mức hoàn thành so FC tháng"
-        legend={<Legend scope={scope} stacked={stacked} target="FC" />}
-      >
-        <VolumeChart
-          months={BIZ_MONTHS}
-          bars={createdBars}
-          lines={createdLines}
-          ariaLabel={`Sản lượng Created và mức hoàn thành FC của ${SCOPE_LABEL[scope]}`}
-        />
-        {missingFc && (
-          <p className={styles.note}>
-            Các tháng không có file FC trong nguồn thì đường hoàn thành bỏ trống
-            — không vẽ 0% để tránh đọc thành hụt chỉ tiêu.
-          </p>
-        )}
-      </ChartCard>
-
-      <ChartCard
-        title="GTTC Volume"
-        note="Cột: sản lượng GTTC · Đường: mức hoàn thành so AOP tháng"
-        legend={<Legend scope={scope} stacked={stacked} target="AOP" />}
-      >
-        <VolumeChart
-          months={BIZ_MONTHS}
-          bars={gtcBars}
-          lines={gtcLines}
-          ariaLabel={`Sản lượng GTTC và mức hoàn thành AOP của ${SCOPE_LABEL[scope]}`}
-        />
-      </ChartCard>
-
-      <ChartCard title="Tỷ trọng theo lane" note="Theo sản lượng Created">
-        <LaneShareTable scope={scope} />
-      </ChartCard>
-
-      {stacked && (
-        <ChartCard
-          title="Sản lượng theo nhóm trọng lượng"
-          note="Theo sản lượng Created"
-        >
-          <BandShareTable scope={scope} />
-        </ChartCard>
-      )}
+    <div className={styles.panelHead}>
+      <span className={styles.panelBar} />
+      <h3>{SCOPE_LABEL[scope]}</h3>
     </div>
   );
 }
 
+type RowKind = "created" | "gtc" | "lane" | "band";
+
+/**
+ * Một hàng của lưới = cùng một loại nội dung cho cả hai scope, đặt cạnh nhau để
+ * so trực tiếp. Ô nào không áp dụng (Standard không tách block weight) thì để
+ * trống chứ không dồn hàng, nếu không các hàng dưới sẽ lệch nhau.
+ */
+function ChartRow({ kind, payload }: { kind: RowKind; payload: BizPayload }) {
+  return (
+    <>
+      <ScopeCell scope="SPB" kind={kind} data={payload.scopes.SPB} months={payload.months} />
+      <ScopeCell scope="SPE" kind={kind} data={payload.scopes.SPE} months={payload.months} />
+    </>
+  );
+}
+
+function ScopeCell({
+  scope,
+  kind,
+  data,
+  months,
+}: {
+  scope: DataScope;
+  kind: RowKind;
+  data: ScopePayload;
+  months: string[];
+}) {
+  const stacked = scope === "SPB";
+
+  if (kind === "band" && !stacked) return <div aria-hidden="true" />;
+
+  if (kind === "lane") {
+    return (
+      <ChartCard
+        scope={scope}
+        title="Tỷ trọng theo lane"
+        note="Theo sản lượng Created"
+      >
+        <LaneShareTable rows={data.laneShare} />
+      </ChartCard>
+    );
+  }
+
+  if (kind === "band") {
+    return (
+      <ChartCard
+        scope={scope}
+        title="Sản lượng theo nhóm trọng lượng"
+        note="Theo sản lượng Created"
+      >
+        <BandShareTable rows={data.bandShare} scope={scope} />
+      </ChartCard>
+    );
+  }
+
+  const isCreated = kind === "created";
+  const target = isCreated ? "FC" : "AOP";
+
+  const bars: BarSegment[][] = data.points.map((p) =>
+    stacked
+      ? p.bands.map((b) => ({
+          key: b.band,
+          label: bandLabel(b.band, scope),
+          value: isCreated ? b.created : b.gtc,
+          className: b.band === "<15kg" ? chart.barLow : chart.barHigh,
+        }))
+      : [
+          {
+            key: "total",
+            label: isCreated ? "Created" : "GTTC",
+            value: isCreated ? p.created : p.gtc,
+            className: isCreated ? chart.barPrimary : chart.barSecondary,
+          },
+        ],
+  );
+
+  const lines: LineSeries[] = [
+    {
+      key: `${target}-total`,
+      label: `Tổng vs ${target}`,
+      dashed: false,
+      className: chart.lineTotal,
+      values: data.points.map((p) => (isCreated ? p.fcTotal : p.aopTotal)),
+    },
+    ...(stacked
+      ? WEIGHT_ORDER.map((band) => ({
+          key: `${target}-${band}`,
+          label: `${bandLabel(band, scope)} vs ${target}`,
+          dashed: true,
+          className: band === "<15kg" ? chart.lineLow : chart.lineHigh,
+          values: data.points.map((p) =>
+            isCreated ? (p.fcByBand[band] ?? null) : (p.aopByBand[band] ?? null),
+          ),
+        }))
+      : []),
+  ];
+
+  return (
+    <ChartCard
+      scope={scope}
+      title={isCreated ? "Created Volume" : "GTTC Volume"}
+      note={`Cột: sản lượng ${isCreated ? "Created" : "GTTC"} · Đường: mức hoàn thành so ${target} tháng`}
+      legend={<Legend scope={scope} stacked={stacked} target={target} />}
+    >
+      <VolumeChart
+        months={months}
+        bars={bars}
+        lines={lines}
+        ariaLabel={`Sản lượng ${isCreated ? "Created" : "GTTC"} và mức hoàn thành ${target} của ${SCOPE_LABEL[scope]}`}
+      />
+    </ChartCard>
+  );
+}
+
 function ChartCard({
+  scope,
   title,
   note,
   legend,
   children,
 }: {
+  scope: DataScope;
   title: string;
   note: string;
   legend?: React.ReactNode;
@@ -318,7 +444,12 @@ function ChartCard({
   return (
     <div className={styles.card}>
       <div className={styles.cardHead}>
-        <h4>{title}</h4>
+        <h4>
+          {/* Khi lưới xuống 1 cột, tiêu đề cột biến mất nên phải gắn tên
+              client vào từng thẻ, nếu không sẽ không biết đang xem bên nào. */}
+          <span className={styles.cardScope}>{SCOPE_LABEL[scope]} · </span>
+          {title}
+        </h4>
         {legend}
       </div>
       <p className={styles.cardNote}>{note}</p>
@@ -341,9 +472,7 @@ function Legend({
       {stacked ? (
         WEIGHT_ORDER.map((band) => (
           <span key={band}>
-            <i
-              className={band === "<15kg" ? styles.swLow : styles.swHigh}
-            />
+            <i className={band === "<15kg" ? styles.swLow : styles.swHigh} />
             {bandLabel(band, scope)}
           </span>
         ))
@@ -367,8 +496,7 @@ function Legend({
   );
 }
 
-function LaneShareTable({ scope }: { scope: DataScope }) {
-  const rows = laneShareByMonth(scope);
+function LaneShareTable({ rows }: { rows: ScopePayload["laneShare"] }) {
   return (
     <div className={styles.tableScroll}>
       <table className={styles.table}>
@@ -380,7 +508,7 @@ function LaneShareTable({ scope }: { scope: DataScope }) {
                 {lane}
               </th>
             ))}
-            <th scope="col">Tổng Created</th>
+            <th scope="col">Tổng</th>
           </tr>
         </thead>
         <tbody>
@@ -401,8 +529,13 @@ function LaneShareTable({ scope }: { scope: DataScope }) {
   );
 }
 
-function BandShareTable({ scope }: { scope: DataScope }) {
-  const rows = bandShareByMonth(scope);
+function BandShareTable({
+  rows,
+  scope,
+}: {
+  rows: ScopePayload["bandShare"];
+  scope: DataScope;
+}) {
   return (
     <div className={styles.tableScroll}>
       <table className={styles.table}>
@@ -441,22 +574,5 @@ function BandShareTable({ scope }: { scope: DataScope }) {
         </tbody>
       </table>
     </div>
-  );
-}
-
-/* ---------------------- Chú thích nguồn, đặt cuối trang ---------------------- */
-
-export function BizFootnote() {
-  return (
-    <p className={styles.footnote}>
-      Nguồn:{" "}
-      <a href={BIZ_SOURCE_URL} target="_blank" rel="noopener noreferrer">
-        tower control raw · raw tab 1 ↗
-      </a>{" "}
-      · snapshot {BIZ_SNAPSHOT_AT}. Số liệu chốt tới <b>{SNAPSHOT_LABEL}</b> nên{" "}
-      {formatMonth(LATEST_MONTH)} chưa đủ tháng — sản lượng MTD và mức hoàn
-      thành của tháng này đều thấp hơn thực tế. FC đối chiếu với Created, AOP
-      đối chiếu với GTTC.
-    </p>
   );
 }

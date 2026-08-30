@@ -35,7 +35,7 @@ body {
 
 body {
   margin: 0;
-  font-family: var(--font-lato), "Lato", "Helvetica Neue", -apple-system,
+  font-family: var(--font-sans), "Be Vietnam Pro", "Segoe UI", -apple-system,
     BlinkMacSystemFont, Arial, sans-serif;
   color: var(--text);
   background: var(--bg);

@@ -1,6 +1,13 @@
 "use client";
 
-import { formatCompact, formatMonthShort, formatNumber } from "@/lib/bizMetrics";
+import { useState } from "react";
+import {
+  formatCompact,
+  formatMonth,
+  formatMonthShort,
+  formatNumber,
+  formatPercent,
+} from "@/lib/format";
 import styles from "./VolumeChart.module.css";
 
 export interface BarSegment {
@@ -47,6 +54,9 @@ export default function VolumeChart({
   lines,
   ariaLabel,
 }: VolumeChartProps) {
+  // Tháng đang được trỏ/chạm/focus. null = không hiện tooltip.
+  const [active, setActive] = useState<number | null>(null);
+
   const stackTotals = bars.map((segs) => segs.reduce((a, s) => a + s.value, 0));
   const topLeft = niceCeil(Math.max(...stackTotals, 0));
 
@@ -64,147 +74,225 @@ export default function VolumeChart({
   const leftTicks = [0, 0.25, 0.5, 0.75, 1].map((t) => t * topLeft);
   const rightTicks = [0, 0.5, 1, 1.5];
 
+  const stacked = bars.some((segs) => segs.length > 1);
+
   return (
     <div className={styles.scroll}>
-      <svg
-        className={styles.svg}
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        role="img"
-        aria-label={ariaLabel}
-      >
-        {leftTicks.map((tick) => (
-          <g key={tick}>
-            <line
-              x1={PAD.left}
-              x2={WIDTH - PAD.right}
-              y1={yLeft(tick)}
-              y2={yLeft(tick)}
-              className={styles.grid}
-            />
-            <text
-              x={PAD.left - 8}
-              y={yLeft(tick) + 4}
-              textAnchor="end"
-              className={styles.axisLabel}
-            >
-              {formatCompact(tick)}
-            </text>
-          </g>
-        ))}
-
-        {rightTicks.map((tick) => (
-          <text
-            key={tick}
-            x={WIDTH - PAD.right + 8}
-            y={yRight(tick) + 4}
-            textAnchor="start"
-            className={styles.axisLabel}
-          >
-            {Math.round(tick * 100)}%
-          </text>
-        ))}
-
-        {/* Mốc 100% — vạch tham chiếu cho các đường hoàn thành. */}
-        <line
-          x1={PAD.left}
-          x2={WIDTH - PAD.right}
-          y1={yRight(1)}
-          y2={yRight(1)}
-          className={styles.target}
-        />
-        <text
-          x={WIDTH - PAD.right + 8}
-          y={yRight(1) - 6}
-          className={styles.targetLabel}
+      <div className={styles.frame}>
+        <svg
+          className={styles.svg}
+          viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+          role="img"
+          aria-label={ariaLabel}
+          onPointerLeave={() => setActive(null)}
         >
-          đạt 100%
-        </text>
-
-        {bars.map((segs, i) => {
-          let cursor = 0;
-          return (
-            <g key={months[i]}>
-              {segs.map((seg) => {
-                const y0 = yLeft(cursor);
-                cursor += seg.value;
-                const y1 = yLeft(cursor);
-                return (
-                  <rect
-                    key={seg.key}
-                    x={xCenter(i) - barW / 2}
-                    y={y1}
-                    width={barW}
-                    height={Math.max(0, y0 - y1)}
-                    className={seg.className}
-                  >
-                    <title>{`${formatMonthShort(months[i])} · ${seg.label}: ${formatNumber(seg.value)}`}</title>
-                  </rect>
-                );
-              })}
+          {leftTicks.map((tick) => (
+            <g key={tick}>
+              <line
+                x1={PAD.left}
+                x2={WIDTH - PAD.right}
+                y1={yLeft(tick)}
+                y2={yLeft(tick)}
+                className={styles.grid}
+              />
               <text
-                x={xCenter(i)}
-                y={HEIGHT - 12}
-                textAnchor="middle"
+                x={PAD.left - 8}
+                y={yLeft(tick) + 4}
+                textAnchor="end"
                 className={styles.axisLabel}
               >
-                {formatMonthShort(months[i])}
+                {formatCompact(tick)}
               </text>
             </g>
-          );
-        })}
+          ))}
 
-        {lines.map((line) => {
-          // Ngắt path ở những tháng không có mục tiêu, thay vì nối thẳng qua.
-          const segments: string[] = [];
-          let current: string[] = [];
-          line.values.forEach((v, i) => {
-            if (v === null) {
-              if (current.length) segments.push(current.join(" "));
-              current = [];
-              return;
-            }
-            current.push(
-              `${current.length ? "L" : "M"}${xCenter(i)},${yRight(Math.min(v, topRight))}`,
+          {rightTicks.map((tick) => (
+            <text
+              key={tick}
+              x={WIDTH - PAD.right + 8}
+              y={yRight(tick) + 4}
+              textAnchor="start"
+              className={styles.axisLabel}
+            >
+              {Math.round(tick * 100)}%
+            </text>
+          ))}
+
+          {/* Mốc 100% — vạch tham chiếu cho các đường hoàn thành. */}
+          <line
+            x1={PAD.left}
+            x2={WIDTH - PAD.right}
+            y1={yRight(1)}
+            y2={yRight(1)}
+            className={styles.target}
+          />
+          <text
+            x={WIDTH - PAD.right + 8}
+            y={yRight(1) - 6}
+            className={styles.targetLabel}
+          >
+            đạt 100%
+          </text>
+
+          {active !== null && (
+            <rect
+              x={PAD.left + active * groupW}
+              y={PAD.top}
+              width={groupW}
+              height={PLOT_H}
+              className={styles.activeBand}
+            />
+          )}
+
+          {bars.map((segs, i) => {
+            let cursor = 0;
+            return (
+              <g key={months[i]}>
+                {segs.map((seg) => {
+                  const y0 = yLeft(cursor);
+                  cursor += seg.value;
+                  const y1 = yLeft(cursor);
+                  return (
+                    <rect
+                      key={seg.key}
+                      x={xCenter(i) - barW / 2}
+                      y={y1}
+                      width={barW}
+                      height={Math.max(0, y0 - y1)}
+                      className={seg.className}
+                    />
+                  );
+                })}
+                <text
+                  x={xCenter(i)}
+                  y={HEIGHT - 12}
+                  textAnchor="middle"
+                  className={
+                    active === i ? styles.axisLabelActive : styles.axisLabel
+                  }
+                >
+                  {formatMonthShort(months[i])}
+                </text>
+              </g>
             );
-          });
-          if (current.length) segments.push(current.join(" "));
+          })}
 
-          return (
-            <g key={line.key}>
-              {segments.map((d, i) => (
-                <path
-                  key={i}
-                  d={d}
-                  fill="none"
-                  className={`${styles.line} ${line.className}`}
-                  strokeDasharray={line.dashed ? "5 4" : undefined}
-                />
-              ))}
-              {line.values.map((v, i) =>
-                v === null ? null : (
-                  <circle
+          {lines.map((line) => {
+            // Ngắt path ở những tháng không có mục tiêu, thay vì nối thẳng qua.
+            const segments: string[] = [];
+            let current: string[] = [];
+            line.values.forEach((v, i) => {
+              if (v === null) {
+                if (current.length) segments.push(current.join(" "));
+                current = [];
+                return;
+              }
+              current.push(
+                `${current.length ? "L" : "M"}${xCenter(i)},${yRight(Math.min(v, topRight))}`,
+              );
+            });
+            if (current.length) segments.push(current.join(" "));
+
+            return (
+              <g key={line.key}>
+                {segments.map((d, i) => (
+                  <path
                     key={i}
-                    cx={xCenter(i)}
-                    cy={yRight(Math.min(v, topRight))}
-                    r={3}
-                    className={`${styles.dot} ${line.className}`}
-                  >
-                    <title>{`${formatMonthShort(months[i])} · ${line.label}: ${(v * 100).toFixed(1).replace(".", ",")}%`}</title>
-                  </circle>
-                ),
-              )}
-            </g>
-          );
-        })}
+                    d={d}
+                    className={`${styles.line} ${line.className}`}
+                    strokeDasharray={line.dashed ? "5 4" : undefined}
+                  />
+                ))}
+                {line.values.map((v, i) =>
+                  v === null ? null : (
+                    <circle
+                      key={i}
+                      cx={xCenter(i)}
+                      cy={yRight(Math.min(v, topRight))}
+                      r={active === i ? 5 : 3}
+                      className={`${styles.dot} ${line.className}`}
+                    />
+                  ),
+                )}
+              </g>
+            );
+          })}
 
-        <line
-          x1={PAD.left}
-          x2={WIDTH - PAD.right}
-          y1={PAD.top + PLOT_H}
-          y2={PAD.top + PLOT_H}
-          className={styles.axis}
-        />
-      </svg>
+          <line
+            x1={PAD.left}
+            x2={WIDTH - PAD.right}
+            y1={PAD.top + PLOT_H}
+            y2={PAD.top + PLOT_H}
+            className={styles.axis}
+          />
+
+          {/* Vùng bắt sự kiện: cả cột tháng, dễ trúng hơn nhiều so với việc
+              phải chạm đúng vào cột hay đúng vào chấm trên đường. */}
+          {months.map((month, i) => (
+            <rect
+              key={`hit-${month}`}
+              x={PAD.left + i * groupW}
+              y={PAD.top}
+              width={groupW}
+              height={PLOT_H}
+              className={styles.hit}
+              tabIndex={0}
+              role="button"
+              aria-label={`Xem số liệu ${formatMonth(month)}`}
+              onPointerEnter={() => setActive(i)}
+              onPointerDown={() => setActive(i)}
+              onFocus={() => setActive(i)}
+              onBlur={() => setActive(null)}
+            />
+          ))}
+        </svg>
+
+        {active !== null && (
+          <div
+            className={styles.tooltip}
+            style={{
+              left: `${((PAD.left + active * groupW + groupW / 2) / WIDTH) * 100}%`,
+            }}
+            role="status"
+          >
+            <div className={styles.tipTitle}>{formatMonth(months[active])}</div>
+
+            {bars[active].map((seg) => (
+              <div key={seg.key} className={styles.tipRow}>
+                <span className={styles.tipKey}>
+                  <i className={`${styles.tipSwatch} ${seg.className}`} />
+                  {seg.label}
+                </span>
+                <b>{formatNumber(seg.value)}</b>
+              </div>
+            ))}
+
+            {stacked && (
+              <div className={`${styles.tipRow} ${styles.tipTotal}`}>
+                <span className={styles.tipKey}>Tổng</span>
+                <b>{formatNumber(stackTotals[active])}</b>
+              </div>
+            )}
+
+            {lines.map((line) => (
+              <div key={line.key} className={styles.tipRow}>
+                <span className={styles.tipKey}>
+                  <i
+                    className={`${styles.tipDash} ${line.className}`}
+                    data-dashed={line.dashed || undefined}
+                  />
+                  {line.label}
+                </span>
+                <b>
+                  {line.values[active] === null
+                    ? "—"
+                    : formatPercent(line.values[active] as number)}
+                </b>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

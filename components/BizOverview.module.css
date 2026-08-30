@@ -169,18 +169,39 @@
 
 /* ---- Phần 2: Sản lượng tháng ---- */
 
-.splitGrid {
+/* Lưới 2 cột đi theo HÀNG chứ không phải 2 cột độc lập: chart cùng loại của
+   hai client nằm cùng một hàng nên luôn thẳng hàng và cao bằng nhau. */
+.matrix {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(430px, 1fr));
-  gap: 18px;
-  align-items: start;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px;
+  align-items: stretch;
 }
 
-.column {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  min-width: 0;
+.matrix > .card {
+  height: 100%;
+}
+
+.cardScope {
+  display: none;
+}
+
+@media (max-width: 1100px) {
+  /* Hẹp quá thì xếp dọc; lúc này tiêu đề cột không còn ý nghĩa nên ẩn đi và
+     gắn tên client vào từng thẻ. */
+  .matrix {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .matrix > .panelHead {
+    display: none;
+  }
+
+  .cardScope {
+    display: inline;
+    color: var(--text-3);
+    font-weight: 700;
+  }
 }
 
 .card {
@@ -283,19 +304,22 @@
 
 .table th,
 .table td {
-  padding: 7px 9px;
+  padding: 7px 6px;
   text-align: right;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
 
 .table thead th {
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--text-2);
   text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
   border-bottom: 1px solid var(--text-3);
+  /* Cho tiêu đề xuống dòng: cột số bên phải mới đủ chỗ hiện trọn con số. */
+  white-space: normal;
+  line-height: 1.3;
 }
 
 .table th:first-child,
@@ -343,5 +367,89 @@
 
   .statValue {
     font-size: 19px;
+  }
+}
+
+/* ---- Cổng kiểm soát truy cập ---- */
+
+.gate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  min-height: 320px;
+  padding: 40px 24px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.gateTitle {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 900;
+  color: var(--text);
+}
+
+.gateText {
+  margin: 0;
+  max-width: 470px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text-2);
+}
+
+.gateText code {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--bg);
+  font-size: 12px;
+}
+
+.gateBtn,
+.gateBtnGhost {
+  margin-top: 6px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.gateBtn {
+  border: 0;
+  background: var(--orange);
+  color: #fff;
+}
+
+.gateBtn:hover {
+  background: var(--orange-dark);
+}
+
+.gateBtnGhost {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-2);
+}
+
+.gateBtnGhost:hover {
+  background: var(--bg);
+}
+
+.gateSpinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid var(--border);
+  border-top-color: var(--orange);
+  border-radius: 50%;
+  animation: gate-spin 0.8s linear infinite;
+}
+
+@keyframes gate-spin {
+  to {
+    transform: rotate(360deg);
   }
 }

@@ -6,7 +6,7 @@ import {
   CAMPAIGN_SNAPSHOT_AT,
   type Direction,
 } from "@/lib/campaignData";
-import { BIZ_SOURCE_URL, SCOPE_LABEL } from "@/lib/bizData";
+import { BIZ_SOURCE_URL, SCOPE_LABEL } from "@/lib/labels";
 import {
   campaignRows,
   formatPp,
@@ -15,7 +15,7 @@ import {
   type OdrCell,
   type ProvinceRow,
 } from "@/lib/campaignMetrics";
-import { formatNumber, formatPercent } from "@/lib/bizMetrics";
+import { formatNumber, formatPercent } from "@/lib/format";
 import type { DataScope } from "@/lib/tabs";
 import Toggle from "./Toggle";
 import styles from "./CampaignOverview.module.css";

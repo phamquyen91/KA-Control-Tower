@@ -5,7 +5,7 @@ import Sidebar from "./Sidebar";
 import Toggle from "./Toggle";
 import Placeholder from "./Placeholder";
 import OpsHealthIframe from "./OpsHealthIframe";
-import BizOverview, { BizFootnote } from "./BizOverview";
+import BizOverview from "./BizOverview";
 import CampaignOverview from "./CampaignOverview";
 import { PLACEHOLDERS } from "@/lib/placeholders";
 import {
@@ -129,7 +129,6 @@ export default function ControlTower({ userEmail }: { userEmail: string }) {
         )}
 
         <footer className={styles.pageFoot}>
-          {activeTab === "biz" && <BizFootnote />}
           <div className={styles.freshbar}>
             {SOURCES.map((source) => (
               <span key={source}>
