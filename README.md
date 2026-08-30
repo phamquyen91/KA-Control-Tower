@@ -114,6 +114,26 @@ Redirect URI phải khai đủ cả hai:
 `http://localhost:3000/api/auth/callback/google` và
 `https://ka-control-tower.vercel.app/api/auth/callback/google`.
 
+## Header bảo mật
+
+`next.config.ts` đặt các header tĩnh (`X-Content-Type-Options`, `X-Frame-Options`,
+`Referrer-Policy`, `Permissions-Policy`, `X-Robots-Tag`) và tắt `poweredByHeader`.
+HSTS do Vercel tự thêm.
+
+`Content-Security-Policy` nằm ở `proxy.ts` chứ không ở next.config, vì nó cần
+nonce sinh mới theo từng request.
+
+Ba dòng trong CSP dễ bị sửa hỏng, đừng đụng nếu chưa hiểu:
+
+| Dòng | Vì sao phải có |
+| --- | --- |
+| `style-src 'unsafe-inline'` | Giao diện dùng `style={{}}` (chiều rộng thanh tỷ trọng, vị trí tooltip). Nonce **không** áp dụng được cho thuộc tính `style=""`, chỉ cho thẻ `<style>` |
+| `form-action ... accounts.google.com` | Form đăng nhập POST về chính mình rồi được chuyển hướng sang Google, trình duyệt kiểm tra cả đích sau chuyển hướng. Thiếu là đăng nhập Google bị chặn |
+| `frame-src <KAS_ORIGIN>` | Tab Sức khoẻ vận hành nhúng app báo cáo KAS |
+
+Sửa CSP xong phải mở DevTools kiểm tra Console: vi phạm CSP không làm build fail,
+nó chỉ âm thầm chặn ở trình duyệt.
+
 ## Mục tiêu: FC và AOP
 
 Hai loại mục tiêu khác nhau về ý nghĩa, đừng dùng lẫn:

@@ -17,6 +17,9 @@ export const metadata: Metadata = {
   title: "GHN Control Tower — Shopee Account",
   description:
     "Control Tower cho KA Scommerce — Shopee Account (Shopee Standard & Shopee Bulky)",
+  // App nội bộ, không có gì nên nằm trên công cụ tìm kiếm. Header X-Robots-Tag
+  // trong next.config.ts mới là lớp phủ chính; thẻ meta này để phòng thêm.
+  robots: { index: false, follow: false, nocache: true },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
