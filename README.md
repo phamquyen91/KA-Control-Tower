@@ -47,6 +47,28 @@ grep -rl "13887419" .next/static | wc -l   # phải ra 0
 Sửa danh sách email ở `lib/allowlist.ts`, hoặc đặt biến `BIZ_ALLOWED_EMAILS`
 (các email cách nhau dấu phẩy) để đổi mà không cần sửa code.
 
+### Gỡ lỗi đăng nhập
+
+Google trả `invalid_client` hoặc trang báo `mã lỗi: Configuration` thì xem log
+thật, đừng đoán: **Vercel → Logs**, lọc `/api/auth/callback/google`. Auth.js ghi
+nguyên nhân gốc vào đó.
+
+Ba biến phải có mặt đủ, thiếu một cái là luồng gãy ở những chỗ khác nhau:
+
+| Biến | Thiếu thì sao |
+| --- | --- |
+| `AUTH_SECRET` | Không mã hoá được cookie state/PKCE, gãy ở bước callback |
+| `AUTH_GOOGLE_ID` | Google chặn ngay màn hình đăng nhập |
+| `AUTH_GOOGLE_SECRET` | Qua được màn hình đăng nhập rồi mới gãy ở bước đổi token |
+
+> **Bẫy đã dính một lần:** lọc danh sách biến bằng chữ `SECRET` sẽ ra **cả**
+> `AUTH_SECRET` lẫn `AUTH_GOOGLE_SECRET`. Xoá cả cụm thì mất luôn `AUTH_SECRET`,
+> mà triệu chứng lại giống hệt lỗi sai client secret. Luôn đọc đủ tên biến.
+
+Ngoài ra: reload trang **không** kiểm chứng được đăng nhập — nó chỉ đọc lại
+cookie phiên, không chạm tới client secret. Muốn test thật thì đăng xuất rồi
+đăng nhập lại, hoặc dùng cửa sổ ẩn danh.
+
 ### Biến môi trường bắt buộc
 
 Xem `.env.example`. Thiếu các biến này thì tab kinh doanh báo lỗi tải, các tab
