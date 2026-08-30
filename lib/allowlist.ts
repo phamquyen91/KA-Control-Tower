@@ -13,7 +13,7 @@ const DEFAULT_ALLOWED = [
   "tuyenvtn@ghn.vn",
   "vinhlt@ghn.vn",
   "thanhnh@ghn.vn",
-  "quyenpt@ahamove.com",
+  "quyenpt1@ghn.vn",
 ];
 
 function parseEnvList(raw: string | undefined) {

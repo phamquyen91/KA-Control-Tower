@@ -88,8 +88,16 @@ export default function BizOverview() {
         subtitle={`GTTC so với AOP · ${formatMonth(latestMonth)}`}
       >
         <div className={styles.overviewGrid}>
-          <ProgressPanel scope="SPB" data={payload.scopes.SPB} />
-          <ProgressPanel scope="SPE" data={payload.scopes.SPE} />
+          <ProgressPanel
+            scope="SPB"
+            data={payload.scopes.SPB}
+            months={payload.months}
+          />
+          <ProgressPanel
+            scope="SPE"
+            data={payload.scopes.SPE}
+            months={payload.months}
+          />
         </div>
       </Section>
 
@@ -219,9 +227,11 @@ function Section({
 function ProgressPanel({
   scope,
   data,
+  months,
 }: {
   scope: DataScope;
   data: ScopePayload;
+  months: string[];
 }) {
   return (
     <div className={styles.panel}>
@@ -234,11 +244,13 @@ function ProgressPanel({
           title="GTTC YTD"
           stat={data.progress.ytd}
           spark={data.progress.spark}
+          months={months}
         />
         <StatCard
           title="GTTC MTD"
           stat={data.progress.mtd}
           spark={data.progress.spark}
+          months={months}
         />
       </div>
     </div>
@@ -249,10 +261,12 @@ function StatCard({
   title,
   stat,
   spark,
+  months,
 }: {
   title: string;
   stat: ScopePayload["progress"]["ytd"];
   spark: number[];
+  months: string[];
 }) {
   const ok = stat.completion >= 1;
   return (
@@ -267,7 +281,7 @@ function StatCard({
           {formatPercent(stat.completion, 1)}
         </span>
       </div>
-      <Sparkline values={spark} ok={ok} />
+      <Sparkline values={spark} months={months} ok={ok} />
       <div className={styles.statFoot}>
         AOP cùng kỳ: {formatNumber(stat.target)}
       </div>
@@ -275,31 +289,86 @@ function StatCard({
   );
 }
 
-function Sparkline({ values, ok }: { values: number[]; ok: boolean }) {
+function Sparkline({
+  values,
+  months,
+  ok,
+}: {
+  values: number[];
+  months: string[];
+  ok: boolean;
+}) {
+  const [active, setActive] = useState<number | null>(null);
+
   const w = 200;
   const h = 34;
   const max = Math.max(...values, 1);
   const step = values.length > 1 ? w / (values.length - 1) : w;
-  const d = values
-    .map((v, i) => `${i ? "L" : "M"}${i * step},${h - (v / max) * (h - 4) - 2}`)
-    .join(" ");
+  const x = (i: number) => i * step;
+  const y = (v: number) => h - (v / max) * (h - 4) - 2;
+  const d = values.map((v, i) => `${i ? "L" : "M"}${x(i)},${y(v)}`).join(" ");
+
   return (
-    <svg
-      className={styles.spark}
-      viewBox={`0 0 ${w} ${h}`}
-      preserveAspectRatio="none"
-      aria-hidden="true"
-    >
-      <path
-        d={`${d} L${w},${h} L0,${h} Z`}
-        className={ok ? styles.sparkFillOk : styles.sparkFillMiss}
-      />
-      <path
-        d={d}
-        fill="none"
-        className={ok ? styles.sparkLineOk : styles.sparkLineMiss}
-      />
-    </svg>
+    <div className={styles.sparkWrap}>
+      <svg
+        className={styles.spark}
+        viewBox={`0 0 ${w} ${h}`}
+        preserveAspectRatio="none"
+        onPointerLeave={() => setActive(null)}
+      >
+        <path
+          d={`${d} L${w},${h} L0,${h} Z`}
+          className={ok ? styles.sparkFillOk : styles.sparkFillMiss}
+        />
+        <path
+          d={d}
+          fill="none"
+          className={ok ? styles.sparkLineOk : styles.sparkLineMiss}
+        />
+
+        {active !== null && (
+          // Vạch dọc chứ không phải chấm tròn: svg này kéo giãn theo chiều
+          // ngang (preserveAspectRatio="none") nên hình tròn sẽ méo thành bầu
+          // dục, còn vạch dọc thì không.
+          <line
+            x1={x(active)}
+            x2={x(active)}
+            y1={0}
+            y2={h}
+            className={styles.sparkMarker}
+          />
+        )}
+
+        {values.map((value, i) => (
+          <rect
+            key={months[i] ?? i}
+            x={x(i) - step / 2}
+            y={0}
+            width={step}
+            height={h}
+            className={styles.sparkHit}
+            tabIndex={0}
+            role="button"
+            aria-label={`${formatMonth(months[i])}: ${formatNumber(value)}`}
+            onPointerEnter={() => setActive(i)}
+            onPointerDown={() => setActive(i)}
+            onFocus={() => setActive(i)}
+            onBlur={() => setActive(null)}
+          />
+        ))}
+      </svg>
+
+      {active !== null && (
+        <div
+          className={styles.sparkTip}
+          style={{ left: `${(x(active) / w) * 100}%` }}
+          role="status"
+        >
+          <b>{formatMonthShort(months[active])}</b>{" "}
+          {formatNumber(values[active])}
+        </div>
+      )}
+    </div>
   );
 }
 
