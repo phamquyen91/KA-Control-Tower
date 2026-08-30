@@ -6,7 +6,7 @@ import {
   CAMPAIGN_SNAPSHOT_AT,
   type Direction,
 } from "@/lib/campaignData";
-import { BIZ_SOURCE_URL } from "@/lib/bizData";
+import { BIZ_SOURCE_URL, SCOPE_LABEL } from "@/lib/bizData";
 import {
   campaignRows,
   formatPp,
@@ -19,11 +19,6 @@ import { formatNumber, formatPercent } from "@/lib/bizMetrics";
 import type { DataScope } from "@/lib/tabs";
 import Toggle from "./Toggle";
 import styles from "./CampaignOverview.module.css";
-
-const SCOPE_LABEL: Record<DataScope, string> = {
-  SPB: "Shopee Bulky",
-  SPE: "Shopee Express",
-};
 
 // Ngưỡng mẫu tối thiểu cho bảng xếp hạng tỉnh. Dưới mức này ODR nhảy về 0%
 // hoặc 100% chỉ vì vài đơn, lọt vào top thì gây hiểu nhầm.

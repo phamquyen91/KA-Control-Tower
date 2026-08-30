@@ -11,7 +11,7 @@ const lato = Lato({
 export const metadata: Metadata = {
   title: "GHN Control Tower — Shopee Account",
   description:
-    "Control Tower cho KA Scommerce — Shopee Account (SPE Express & SPE Bulky)",
+    "Control Tower cho KA Scommerce — Shopee Account (Shopee Standard & Shopee Bulky)",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

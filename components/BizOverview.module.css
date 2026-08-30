@@ -1,173 +1,275 @@
-.wrap {
+.page {
   display: flex;
   flex-direction: column;
+  gap: 22px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sectionHead h2 {
+  font-size: 16px;
+  font-weight: 900;
+  margin: 0;
+  color: var(--text);
+}
+
+.sectionSub {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+/* ---- Phần 1: Tổng quan ---- */
+
+.overviewGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+}
+
+.panelBar {
+  width: 4px;
+  height: 17px;
+  border-radius: 3px;
+  background: var(--orange);
+  flex-shrink: 0;
+}
+
+.panelHead h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  color: var(--text);
+  text-transform: uppercase;
+}
+
+.statRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.stat {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 13px 14px;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.statTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.statTitle {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-2);
+  letter-spacing: 0.3px;
+}
+
+.statPeriod {
+  font-size: 10.5px;
+  color: var(--text-3);
+}
+
+.statMain {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.statValue {
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.1;
+  color: var(--text);
+}
+
+.badgeOk,
+.badgeMiss {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.badgeOk {
+  color: var(--success);
+  background: var(--success-tint);
+}
+
+.badgeMiss {
+  color: var(--danger);
+  background: var(--danger-tint);
+}
+
+.spark {
+  width: 100%;
+  height: 34px;
+  display: block;
+}
+
+.sparkLineOk {
+  stroke: var(--success);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.sparkLineMiss {
+  stroke: var(--danger);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.sparkFillOk {
+  fill: var(--success-tint);
+}
+
+.sparkFillMiss {
+  fill: var(--danger-tint);
+}
+
+.statFoot {
+  font-size: 10.5px;
+  color: var(--text-3);
+}
+
+/* ---- Phần 2: Sản lượng tháng ---- */
+
+.splitGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(430px, 1fr));
   gap: 18px;
+  align-items: start;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
 }
 
 .card {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 18px 20px;
+  padding: 15px 16px;
 }
 
 .cardHead {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
+  gap: 10px;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 14px;
 }
 
-.cardHead h2 {
-  font-size: 15px;
+.cardHead h4 {
   margin: 0;
+  font-size: 13.5px;
   font-weight: 700;
   color: var(--text);
 }
 
-.source {
+.cardNote {
+  margin: 4px 0 12px;
   font-size: 11.5px;
   color: var(--text-3);
-}
-
-.source a {
-  color: var(--blue);
-  font-weight: 700;
-}
-
-.source a:hover {
-  text-decoration: underline;
-}
-
-.caveat {
-  margin: 0 0 16px;
-  padding: 10px 13px;
-  border-left: 3px solid var(--warning);
-  border-radius: 0 6px 6px 0;
-  background: var(--warning-tint);
-  font-size: 12.5px;
-  line-height: 1.55;
-  color: var(--text-2);
+  line-height: 1.5;
 }
 
 .note {
-  margin: 12px 0 0;
-  font-size: 12px;
-  line-height: 1.55;
-  color: var(--text-3);
-}
-
-/* ---- KPI ---- */
-
-.kpis {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px;
-}
-
-.kpi {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px 14px;
-  background: var(--bg);
-}
-
-.kpiLabel {
+  margin: 10px 0 0;
   font-size: 11.5px;
-  color: var(--text-2);
-  margin-bottom: 6px;
-}
-
-.kpiValue {
-  font-size: 21px;
-  font-weight: 900;
-  color: var(--text);
-  line-height: 1.15;
-}
-
-.kpiHint {
-  margin-top: 5px;
-  font-size: 11px;
+  line-height: 1.5;
   color: var(--text-3);
-  line-height: 1.45;
 }
 
-.up {
-  color: var(--success);
-}
-
-.down {
-  color: var(--danger);
-}
-
-/* ---- Chart ---- */
+/* ---- Chú giải ---- */
 
 .legend {
   display: flex;
-  gap: 14px;
-  font-size: 12px;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 11px;
   color: var(--text-2);
 }
 
 .legend span {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 
-.swatchCreated,
-.swatchGtc {
-  width: 11px;
-  height: 11px;
+.swLow,
+.swHigh,
+.swPrimary {
+  width: 10px;
+  height: 10px;
   border-radius: 3px;
   display: inline-block;
 }
 
-.swatchCreated {
+.swLow {
+  background: #7aa2c9;
+}
+
+.swHigh {
   background: var(--blue);
 }
 
-.swatchGtc {
-  background: var(--orange);
+.swPrimary {
+  background: var(--blue);
 }
 
-.chartScroll {
-  overflow-x: auto;
+.lnTotal,
+.lnDashed {
+  width: 16px;
+  height: 0;
+  display: inline-block;
+  border-top: 2px solid var(--orange-dark);
 }
 
-.chart {
-  display: block;
-  width: 100%;
-  min-width: 560px;
-  height: auto;
+.lnDashed {
+  border-top-style: dashed;
+  border-top-color: var(--text-2);
 }
 
-.grid {
-  stroke: var(--border);
-  stroke-width: 1;
-}
-
-.axis {
-  stroke: var(--text-3);
-  stroke-width: 1;
-}
-
-.axisLabel {
-  fill: var(--text-3);
-  font-size: 11px;
-}
-
-.barCreated {
-  fill: var(--blue);
-}
-
-.barGtc {
-  fill: var(--orange);
-}
-
-/* ---- Table ---- */
+/* ---- Bảng ---- */
 
 .tableScroll {
   overflow-x: auto;
@@ -175,21 +277,20 @@
 
 .table {
   width: 100%;
-  min-width: 620px;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 12.5px;
 }
 
 .table th,
 .table td {
-  padding: 9px 12px;
+  padding: 7px 9px;
   text-align: right;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
 
 .table thead th {
-  font-size: 11.5px;
+  font-size: 10.5px;
   font-weight: 700;
   color: var(--text-2);
   text-transform: uppercase;
@@ -198,8 +299,7 @@
 }
 
 .table th:first-child,
-.table tbody th,
-.table tfoot th {
+.table tbody th {
   text-align: left;
   font-weight: 700;
   color: var(--text);
@@ -209,35 +309,39 @@
   background: var(--bg);
 }
 
-.table tfoot th,
-.table tfoot td {
-  border-bottom: none;
-  border-top: 2px solid var(--border);
+.strong {
   font-weight: 700;
   color: var(--text);
 }
 
-.shareCell {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
+/* ---- Chú thích nguồn cuối trang ---- */
+
+.footnote {
+  margin: 0;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-3);
 }
 
-.shareBar {
-  height: 7px;
-  border-radius: 4px;
-  background: var(--orange-light);
-  flex-shrink: 0;
-  max-width: 90px;
+.footnote a {
+  color: var(--blue);
+  font-weight: 700;
+}
+
+.footnote a:hover {
+  text-decoration: underline;
 }
 
 @media (max-width: 900px) {
   .card {
-    padding: 15px 14px;
+    padding: 13px 12px;
   }
 
-  .kpiValue {
-    font-size: 18px;
+  .statValue {
+    font-size: 19px;
   }
 }

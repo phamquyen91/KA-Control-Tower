@@ -1,329 +1,462 @@
 "use client";
 
 import {
+  BIZ_MONTHS,
   BIZ_SNAPSHOT_AT,
   BIZ_SOURCE_URL,
-  type Lane,
-  type WeightBand,
+  LANE_ORDER,
+  SCOPE_LABEL,
+  WEIGHT_ORDER,
+  bandLabel,
 } from "@/lib/bizData";
 import {
-  bizSummary,
-  formatCompact,
+  aopCompletion,
+  bandShareByMonth,
+  fcCompletion,
   formatMonth,
   formatMonthShort,
   formatNumber,
   formatPercent,
-  formatSignedPercent,
-  laneBreakdown,
-  monthlySeries,
-  weightBreakdown,
-  type BreakdownRow,
+  laneShareByMonth,
+  monthlyByBand,
+  scopeProgress,
+  type ScopeProgress,
 } from "@/lib/bizMetrics";
 import type { DataScope } from "@/lib/tabs";
+import VolumeChart, {
+  type BarSegment,
+  type LineSeries,
+} from "./VolumeChart";
+import chart from "./VolumeChart.module.css";
 import styles from "./BizOverview.module.css";
 
-const SCOPE_LABEL: Record<DataScope, string> = {
-  SPB: "Shopee Bulky",
-  SPE: "Shopee Express",
-};
-
-// Ngày cuối cùng có số liệu trong snapshot. Tháng cuối vì thế chưa đủ tháng —
-// mọi so sánh MoM với tháng đó đều lệch, nên phải nói rõ trên giao diện.
+// Snapshot chốt giữa tháng 8 nên tháng cuối khuyết ngày — mọi con số MTD và
+// mức hoàn thành của tháng đó đều thấp hơn thực tế.
 const SNAPSHOT_LABEL = "19/08/2026";
 
-export default function BizOverview({ scope }: { scope: DataScope }) {
-  const series = monthlySeries(scope);
-  const summary = bizSummary(scope);
-  const lanes = laneBreakdown(scope, summary.month, summary.prevMonth);
-  const weights = weightBreakdown(scope, summary.month, summary.prevMonth);
+const LATEST_MONTH = BIZ_MONTHS[BIZ_MONTHS.length - 1];
+
+export default function BizOverview() {
+  return (
+    <div className={styles.page}>
+      <Section title="Tổng quan" subtitle={`GTTC so với AOP · ${formatMonth(LATEST_MONTH)}`}>
+        <div className={styles.overviewGrid}>
+          <ProgressPanel scope="SPB" />
+          <ProgressPanel scope="SPE" />
+        </div>
+      </Section>
+
+      <Section
+        title="Sản lượng tháng"
+        subtitle="Created so FC · GTTC so AOP"
+      >
+        <div className={styles.splitGrid}>
+          <ScopeColumn scope="SPB" />
+          <ScopeColumn scope="SPE" />
+        </div>
+      </Section>
+    </div>
+  );
+}
+
+function Section({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className={styles.section}>
+      <div className={styles.sectionHead}>
+        <h2>{title}</h2>
+        {subtitle && <span className={styles.sectionSub}>{subtitle}</span>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/* ------------------------------- Phần 1 -------------------------------- */
+
+function ProgressPanel({ scope }: { scope: DataScope }) {
+  const progress = scopeProgress(scope);
+  return (
+    <div className={styles.panel}>
+      <div className={styles.panelHead}>
+        <span className={styles.panelBar} />
+        <h3>{SCOPE_LABEL[scope]}</h3>
+      </div>
+      <div className={styles.statRow}>
+        <StatCard title="GTTC YTD" stat={progress.ytd} spark={progress.spark} />
+        <StatCard title="GTTC MTD" stat={progress.mtd} spark={progress.spark} />
+      </div>
+    </div>
+  );
+}
+
+function StatCard({
+  title,
+  stat,
+  spark,
+}: {
+  title: string;
+  stat: ScopeProgress["ytd"];
+  spark: number[];
+}) {
+  const ok = stat.completion >= 1;
+  return (
+    <div className={styles.stat}>
+      <div className={styles.statTop}>
+        <span className={styles.statTitle}>{title}</span>
+        <span className={styles.statPeriod}>{stat.periodLabel}</span>
+      </div>
+      <div className={styles.statMain}>
+        <span className={styles.statValue}>{formatNumber(stat.gtc)}</span>
+        <span className={ok ? styles.badgeOk : styles.badgeMiss}>
+          {formatPercent(stat.completion, 1)}
+        </span>
+      </div>
+      <Sparkline values={spark} ok={ok} />
+      <div className={styles.statFoot}>
+        AOP cùng kỳ: {formatNumber(stat.target)}
+      </div>
+    </div>
+  );
+}
+
+function Sparkline({ values, ok }: { values: number[]; ok: boolean }) {
+  const w = 200;
+  const h = 34;
+  const max = Math.max(...values, 1);
+  const step = values.length > 1 ? w / (values.length - 1) : w;
+  const d = values
+    .map((v, i) => `${i ? "L" : "M"}${i * step},${h - (v / max) * (h - 4) - 2}`)
+    .join(" ");
+  return (
+    <svg
+      className={styles.spark}
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <path
+        d={`${d} L${w},${h} L0,${h} Z`}
+        className={ok ? styles.sparkFillOk : styles.sparkFillMiss}
+      />
+      <path
+        d={d}
+        fill="none"
+        className={ok ? styles.sparkLineOk : styles.sparkLineMiss}
+      />
+    </svg>
+  );
+}
+
+/* ------------------------------- Phần 2 -------------------------------- */
+
+function ScopeColumn({ scope }: { scope: DataScope }) {
+  const stacked = scope === "SPB";
+  const points = monthlyByBand(scope);
+
+  const createdBars: BarSegment[][] = points.map((p) =>
+    stacked
+      ? p.bands.map((b) => ({
+          key: b.band,
+          label: bandLabel(b.band, scope),
+          value: b.created,
+          className: b.band === "<15kg" ? chart.barLow : chart.barHigh,
+        }))
+      : [
+          {
+            key: "total",
+            label: "Created",
+            value: p.created,
+            className: chart.barPrimary,
+          },
+        ],
+  );
+
+  const gtcBars: BarSegment[][] = points.map((p) =>
+    stacked
+      ? p.bands.map((b) => ({
+          key: b.band,
+          label: bandLabel(b.band, scope),
+          value: b.gtc,
+          className: b.band === "<15kg" ? chart.barLow : chart.barHigh,
+        }))
+      : [
+          {
+            key: "total",
+            label: "GTTC",
+            value: p.gtc,
+            className: chart.barSecondary,
+          },
+        ],
+  );
+
+  const createdLines: LineSeries[] = [
+    {
+      key: "fc-total",
+      label: "Tổng vs FC",
+      dashed: false,
+      className: chart.lineTotal,
+      values: points.map(
+        (p) => fcCompletion(scope, p.month, p.created) ?? null,
+      ),
+    },
+    ...(stacked
+      ? WEIGHT_ORDER.map((band) => ({
+          key: `fc-${band}`,
+          label: `${bandLabel(band, scope)} vs FC`,
+          dashed: true,
+          className: band === "<15kg" ? chart.lineLow : chart.lineHigh,
+          values: points.map((p) => {
+            const cell = p.bands.find((b) => b.band === band);
+            return cell
+              ? (fcCompletion(scope, p.month, cell.created, band) ?? null)
+              : null;
+          }),
+        }))
+      : []),
+  ];
+
+  const gtcLines: LineSeries[] = [
+    {
+      key: "aop-total",
+      label: "Tổng vs AOP",
+      dashed: false,
+      className: chart.lineTotal,
+      values: points.map((p) => aopCompletion(scope, p.month, p.gtc) ?? null),
+    },
+    ...(stacked
+      ? WEIGHT_ORDER.map((band) => ({
+          key: `aop-${band}`,
+          label: `${bandLabel(band, scope)} vs AOP`,
+          dashed: true,
+          className: band === "<15kg" ? chart.lineLow : chart.lineHigh,
+          values: points.map((p) => {
+            const cell = p.bands.find((b) => b.band === band);
+            return cell
+              ? (aopCompletion(scope, p.month, cell.gtc, band) ?? null)
+              : null;
+          }),
+        }))
+      : []),
+  ];
+
+  const missingFc = createdLines[0].values.some((v) => v === null);
 
   return (
-    <div className={styles.wrap}>
-      <section className={styles.card}>
-        <div className={styles.cardHead}>
-          <h2>
-            Sản lượng {SCOPE_LABEL[scope]} — {formatMonth(summary.month)}
-          </h2>
-          <span className={styles.source}>
-            Nguồn:{" "}
-            <a href={BIZ_SOURCE_URL} target="_blank" rel="noopener noreferrer">
-              tower control raw · raw_1 ↗
-            </a>{" "}
-            · snapshot {BIZ_SNAPSHOT_AT}
-          </span>
-        </div>
+    <div className={styles.column}>
+      <div className={styles.panelHead}>
+        <span className={styles.panelBar} />
+        <h3>{SCOPE_LABEL[scope]}</h3>
+      </div>
 
-        <p className={styles.caveat}>
-          Số liệu chốt tới <b>{SNAPSHOT_LABEL}</b>, nên{" "}
-          {formatMonth(summary.month)} <b>chưa đủ tháng</b>. Các chỉ số MoM bên
-          dưới đang so một tháng khuyết với một tháng đủ — đọc theo hướng, đừng
-          lấy làm mức tăng trưởng thật.
-        </p>
-
-        <div className={styles.kpis}>
-          <Kpi label="Created" value={formatNumber(summary.created)} />
-          <Kpi label="GTTC" value={formatNumber(summary.gtc)} />
-          <Kpi
-            label="GTTC / Created"
-            value={formatPercent(summary.gtcRate)}
-            hint="Tỷ lệ giao thành công trên đơn tạo"
-          />
-          <Kpi
-            label={`MoM vs ${summary.prevMonth ? formatMonth(summary.prevMonth) : "—"}`}
-            value={formatSignedPercent(summary.momCreated)}
-            tone={
-              summary.momCreated === null
-                ? undefined
-                : summary.momCreated >= 0
-                  ? "up"
-                  : "down"
-            }
-            hint="Chưa loại trừ việc tháng cuối khuyết ngày"
-          />
-          <Kpi
-            label="Created luỹ kế 8 tháng"
-            value={formatNumber(summary.ytdCreated)}
-          />
-        </div>
-      </section>
-
-      <section className={styles.card}>
-        <div className={styles.cardHead}>
-          <h2>Created và GTTC theo tháng</h2>
-          <div className={styles.legend}>
-            <span>
-              <i className={styles.swatchCreated} /> Created
-            </span>
-            <span>
-              <i className={styles.swatchGtc} /> GTTC
-            </span>
-          </div>
-        </div>
-        <MonthlyChart series={series} />
-      </section>
-
-      <section className={styles.card}>
-        <div className={styles.cardHead}>
-          <h2>Tỷ trọng theo loại lane — {formatMonth(summary.month)}</h2>
-        </div>
-        <BreakdownTable rows={lanes} firstColumn="Lane" />
-      </section>
-
-      <section className={styles.card}>
-        <div className={styles.cardHead}>
-          <h2>Cơ cấu theo nhóm trọng lượng — {formatMonth(summary.month)}</h2>
-        </div>
-        <BreakdownTable rows={weights} firstColumn="Nhóm trọng lượng" />
-        {scope === "SPE" && (
+      <ChartCard
+        title="Created Volume"
+        note="Cột: sản lượng Created · Đường: mức hoàn thành so FC tháng"
+        legend={<Legend scope={scope} stacked={stacked} target="FC" />}
+      >
+        <VolumeChart
+          months={BIZ_MONTHS}
+          bars={createdBars}
+          lines={createdLines}
+          ariaLabel={`Sản lượng Created và mức hoàn thành FC của ${SCOPE_LABEL[scope]}`}
+        />
+        {missingFc && (
           <p className={styles.note}>
-            SPE gần như toàn bộ nằm ở nhóm &lt;15kg; nhóm ≥15kg chỉ vài chục đơn
-            mỗi tháng nên tỷ trọng làm tròn về 0,0%.
+            Các tháng không có file FC trong nguồn thì đường hoàn thành bỏ trống
+            — không vẽ 0% để tránh đọc thành hụt chỉ tiêu.
           </p>
         )}
-      </section>
-    </div>
-  );
-}
+      </ChartCard>
 
-function Kpi({
-  label,
-  value,
-  hint,
-  tone,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  tone?: "up" | "down";
-}) {
-  return (
-    <div className={styles.kpi}>
-      <div className={styles.kpiLabel}>{label}</div>
-      <div
-        className={[
-          styles.kpiValue,
-          tone === "up" ? styles.up : "",
-          tone === "down" ? styles.down : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
+      <ChartCard
+        title="GTTC Volume"
+        note="Cột: sản lượng GTTC · Đường: mức hoàn thành so AOP tháng"
+        legend={<Legend scope={scope} stacked={stacked} target="AOP" />}
       >
-        {value}
-      </div>
-      {hint && <div className={styles.kpiHint}>{hint}</div>}
-    </div>
-  );
-}
-
-// Biểu đồ cột nhóm, vẽ bằng SVG thuần: không thêm dependency và không cần
-// script ngoài (CSP của app chỉ cho phép 'self').
-function MonthlyChart({
-  series,
-}: {
-  series: { month: string; created: number; gtc: number }[];
-}) {
-  const width = 760;
-  const height = 300;
-  const padding = { top: 16, right: 12, bottom: 34, left: 56 };
-  const plotW = width - padding.left - padding.right;
-  const plotH = height - padding.top - padding.bottom;
-
-  const max = Math.max(...series.flatMap((p) => [p.created, p.gtc]));
-  // Làm tròn trần lên để đường lưới ra số đẹp.
-  const step = Math.pow(10, Math.floor(Math.log10(max))) / 2;
-  const top = Math.ceil(max / step) * step;
-
-  const groupW = plotW / series.length;
-  const barW = Math.min(26, (groupW - 14) / 2);
-  const y = (value: number) => padding.top + plotH - (value / top) * plotH;
-  const ticks = [0, 0.25, 0.5, 0.75, 1].map((t) => t * top);
-
-  return (
-    <div className={styles.chartScroll}>
-      <svg
-        className={styles.chart}
-        viewBox={`0 0 ${width} ${height}`}
-        role="img"
-        aria-label="Biểu đồ cột sản lượng Created và GTTC theo tháng"
-      >
-        {ticks.map((tick) => (
-          <g key={tick}>
-            <line
-              x1={padding.left}
-              x2={width - padding.right}
-              y1={y(tick)}
-              y2={y(tick)}
-              className={styles.grid}
-            />
-            <text
-              x={padding.left - 8}
-              y={y(tick) + 4}
-              textAnchor="end"
-              className={styles.axisLabel}
-            >
-              {formatCompact(tick)}
-            </text>
-          </g>
-        ))}
-
-        {series.map((point, index) => {
-          const groupX = padding.left + index * groupW;
-          const createdX = groupX + groupW / 2 - barW - 3;
-          const gtcX = groupX + groupW / 2 + 3;
-          return (
-            <g key={point.month}>
-              <rect
-                x={createdX}
-                y={y(point.created)}
-                width={barW}
-                height={padding.top + plotH - y(point.created)}
-                className={styles.barCreated}
-              >
-                <title>{`${formatMonth(point.month)} · Created: ${formatNumber(point.created)}`}</title>
-              </rect>
-              <rect
-                x={gtcX}
-                y={y(point.gtc)}
-                width={barW}
-                height={padding.top + plotH - y(point.gtc)}
-                className={styles.barGtc}
-              >
-                <title>{`${formatMonth(point.month)} · GTTC: ${formatNumber(point.gtc)}`}</title>
-              </rect>
-              <text
-                x={groupX + groupW / 2}
-                y={height - 12}
-                textAnchor="middle"
-                className={styles.axisLabel}
-              >
-                {formatMonthShort(point.month)}
-              </text>
-            </g>
-          );
-        })}
-
-        <line
-          x1={padding.left}
-          x2={width - padding.right}
-          y1={padding.top + plotH}
-          y2={padding.top + plotH}
-          className={styles.axis}
+        <VolumeChart
+          months={BIZ_MONTHS}
+          bars={gtcBars}
+          lines={gtcLines}
+          ariaLabel={`Sản lượng GTTC và mức hoàn thành AOP của ${SCOPE_LABEL[scope]}`}
         />
-      </svg>
+      </ChartCard>
+
+      <ChartCard title="Tỷ trọng theo lane" note="Theo sản lượng Created">
+        <LaneShareTable scope={scope} />
+      </ChartCard>
+
+      {stacked && (
+        <ChartCard
+          title="Sản lượng theo nhóm trọng lượng"
+          note="Theo sản lượng Created"
+        >
+          <BandShareTable scope={scope} />
+        </ChartCard>
+      )}
     </div>
   );
 }
 
-function BreakdownTable<T extends Lane | WeightBand>({
-  rows,
-  firstColumn,
+function ChartCard({
+  title,
+  note,
+  legend,
+  children,
 }: {
-  rows: BreakdownRow<T>[];
-  firstColumn: string;
+  title: string;
+  note: string;
+  legend?: React.ReactNode;
+  children: React.ReactNode;
 }) {
-  const total = rows.reduce(
-    (acc, r) => ({ created: acc.created + r.created, gtc: acc.gtc + r.gtc }),
-    { created: 0, gtc: 0 },
+  return (
+    <div className={styles.card}>
+      <div className={styles.cardHead}>
+        <h4>{title}</h4>
+        {legend}
+      </div>
+      <p className={styles.cardNote}>{note}</p>
+      {children}
+    </div>
   );
+}
 
+function Legend({
+  scope,
+  stacked,
+  target,
+}: {
+  scope: DataScope;
+  stacked: boolean;
+  target: "FC" | "AOP";
+}) {
+  return (
+    <div className={styles.legend}>
+      {stacked ? (
+        WEIGHT_ORDER.map((band) => (
+          <span key={band}>
+            <i
+              className={band === "<15kg" ? styles.swLow : styles.swHigh}
+            />
+            {bandLabel(band, scope)}
+          </span>
+        ))
+      ) : (
+        <span>
+          <i className={styles.swPrimary} />
+          Sản lượng
+        </span>
+      )}
+      <span>
+        <i className={styles.lnTotal} />
+        Tổng vs {target}
+      </span>
+      {stacked && (
+        <span>
+          <i className={styles.lnDashed} />
+          Theo block weight
+        </span>
+      )}
+    </div>
+  );
+}
+
+function LaneShareTable({ scope }: { scope: DataScope }) {
+  const rows = laneShareByMonth(scope);
   return (
     <div className={styles.tableScroll}>
       <table className={styles.table}>
         <thead>
           <tr>
-            <th scope="col">{firstColumn}</th>
-            <th scope="col">Created</th>
-            <th scope="col">Tỷ trọng</th>
-            <th scope="col">GTTC</th>
-            <th scope="col">GTTC / Created</th>
-            <th scope="col">MoM Created</th>
+            <th scope="col">Tháng</th>
+            {LANE_ORDER.map((lane) => (
+              <th key={lane} scope="col">
+                {lane}
+              </th>
+            ))}
+            <th scope="col">Tổng Created</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.key}>
-              <th scope="row">{row.key}</th>
-              <td>{formatNumber(row.created)}</td>
-              <td>
-                <div className={styles.shareCell}>
-                  <span
-                    className={styles.shareBar}
-                    style={{ width: `${Math.round(row.share * 100)}%` }}
-                  />
-                  <span>{formatPercent(row.share)}</span>
-                </div>
-              </td>
-              <td>{formatNumber(row.gtc)}</td>
-              <td>{formatPercent(row.gtcRate)}</td>
-              <td
-                className={
-                  row.momCreated === null
-                    ? undefined
-                    : row.momCreated >= 0
-                      ? styles.up
-                      : styles.down
-                }
-              >
-                {formatSignedPercent(row.momCreated)}
+            <tr key={row.month}>
+              <th scope="row">{formatMonthShort(row.month)}</th>
+              {row.shares.map((cell) => (
+                <td key={cell.lane}>{formatPercent(cell.share)}</td>
+              ))}
+              <td className={styles.strong}>
+                {formatNumber(row.totalCreated)}
               </td>
             </tr>
           ))}
         </tbody>
-        <tfoot>
-          <tr>
-            <th scope="row">Tổng</th>
-            <td>{formatNumber(total.created)}</td>
-            <td>100,0%</td>
-            <td>{formatNumber(total.gtc)}</td>
-            <td>
-              {formatPercent(
-                total.created === 0 ? 0 : total.gtc / total.created,
-              )}
-            </td>
-            <td>—</td>
-          </tr>
-        </tfoot>
       </table>
     </div>
+  );
+}
+
+function BandShareTable({ scope }: { scope: DataScope }) {
+  const rows = bandShareByMonth(scope);
+  return (
+    <div className={styles.tableScroll}>
+      <table className={styles.table}>
+        <thead>
+          <tr>
+            <th scope="col" rowSpan={2}>
+              Tháng
+            </th>
+            {WEIGHT_ORDER.map((band) => (
+              <th key={band} scope="col" colSpan={2}>
+                {bandLabel(band, scope)}
+              </th>
+            ))}
+          </tr>
+          <tr>
+            {WEIGHT_ORDER.map((band) => [
+              <th key={`${band}-v`} scope="col">
+                Sản lượng
+              </th>,
+              <th key={`${band}-s`} scope="col">
+                Tỷ trọng
+              </th>,
+            ])}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.month}>
+              <th scope="row">{formatMonthShort(row.month)}</th>
+              {row.cells.map((cell) => [
+                <td key={`${cell.band}-v`}>{formatNumber(cell.created)}</td>,
+                <td key={`${cell.band}-s`}>{formatPercent(cell.share)}</td>,
+              ])}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* ---------------------- Chú thích nguồn, đặt cuối trang ---------------------- */
+
+export function BizFootnote() {
+  return (
+    <p className={styles.footnote}>
+      Nguồn:{" "}
+      <a href={BIZ_SOURCE_URL} target="_blank" rel="noopener noreferrer">
+        tower control raw · raw tab 1 ↗
+      </a>{" "}
+      · snapshot {BIZ_SNAPSHOT_AT}. Số liệu chốt tới <b>{SNAPSHOT_LABEL}</b> nên{" "}
+      {formatMonth(LATEST_MONTH)} chưa đủ tháng — sản lượng MTD và mức hoàn
+      thành của tháng này đều thấp hơn thực tế. FC đối chiếu với Created, AOP
+      đối chiếu với GTTC.
+    </p>
   );
 }

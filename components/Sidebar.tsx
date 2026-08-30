@@ -11,6 +11,9 @@ interface SidebarProps {
   userEmail: string;
   /** Mở drawer trên mobile (<=900px). Trên desktop sidebar luôn hiện. */
   isDrawerOpen: boolean;
+  /** Thu gọn còn thanh hẹp (chỉ có tác dụng trên desktop). */
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
 export default function Sidebar({
@@ -19,15 +22,32 @@ export default function Sidebar({
   scope,
   userEmail,
   isDrawerOpen,
+  isCollapsed,
+  onToggleCollapse,
 }: SidebarProps) {
   const [expanded, setExpanded] = useState<string | null>("cskh");
 
   return (
     <nav
-      className={[styles.sidebar, isDrawerOpen ? styles.drawerOpen : ""]
+      className={[
+        styles.sidebar,
+        isDrawerOpen ? styles.drawerOpen : "",
+        isCollapsed ? styles.collapsed : "",
+      ]
         .filter(Boolean)
         .join(" ")}
     >
+      <button
+        type="button"
+        className={styles.collapseBtn}
+        onClick={onToggleCollapse}
+        aria-expanded={!isCollapsed}
+        aria-label={isCollapsed ? "Mở rộng mục lục" : "Thu gọn mục lục"}
+        title={isCollapsed ? "Mở rộng mục lục" : "Thu gọn mục lục"}
+      >
+        <span aria-hidden="true">‹</span>
+      </button>
+
       <div className={styles.brand}>
         <div className={styles.logo}>GHN</div>
         <div>
@@ -64,6 +84,7 @@ export default function Sidebar({
                   : onSelectTab(block.tab!)
               }
               aria-expanded={block.children ? isOpen : undefined}
+              title={block.label}
             >
               <span className={styles.dot} />
               <span>{block.label}</span>

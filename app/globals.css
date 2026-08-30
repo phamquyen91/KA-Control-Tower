@@ -20,6 +20,7 @@
   --bg: #f5f5f3;
   --card: #ffffff;
   --sidebar-w: 252px;
+  --sidebar-w-collapsed: 62px;
 }
 
 * {

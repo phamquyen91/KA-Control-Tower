@@ -5,7 +5,7 @@ import Sidebar from "./Sidebar";
 import Toggle from "./Toggle";
 import Placeholder from "./Placeholder";
 import OpsHealthIframe from "./OpsHealthIframe";
-import BizOverview from "./BizOverview";
+import BizOverview, { BizFootnote } from "./BizOverview";
 import CampaignOverview from "./CampaignOverview";
 import { PLACEHOLDERS } from "@/lib/placeholders";
 import {
@@ -29,6 +29,7 @@ export default function ControlTower({ userEmail }: { userEmail: string }) {
   const [dataPeriod, setDataPeriod] = useState<DataPeriod>("day");
   // Drawer chỉ có tác dụng <=900px; desktop sidebar luôn hiện.
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isNavCollapsed, setIsNavCollapsed] = useState(false);
 
   function handleSelectTab(tab: TabId) {
     setActiveTab(tab);
@@ -43,6 +44,8 @@ export default function ControlTower({ userEmail }: { userEmail: string }) {
         scope={dataScope}
         userEmail={userEmail}
         isDrawerOpen={isDrawerOpen}
+        isCollapsed={isNavCollapsed}
+        onToggleCollapse={() => setIsNavCollapsed((v) => !v)}
       />
 
       {isDrawerOpen && (
@@ -54,7 +57,11 @@ export default function ControlTower({ userEmail }: { userEmail: string }) {
         />
       )}
 
-      <main className={styles.main}>
+      <main
+        className={[styles.main, isNavCollapsed ? styles.mainWide : ""]
+          .filter(Boolean)
+          .join(" ")}
+      >
         <div className={styles.topbar}>
           <div className={styles.titleGroup}>
             <button
@@ -74,16 +81,20 @@ export default function ControlTower({ userEmail }: { userEmail: string }) {
             </div>
           </div>
           <div className={styles.toggles}>
-            <Toggle
-              ariaLabel="Chọn nhóm dịch vụ"
-              variant="blue"
-              value={dataScope}
-              onChange={setDataScope}
-              options={[
-                { value: "SPB", label: "SPB (Bulky)" },
-                { value: "SPE", label: "SPE (Express)" },
-              ]}
-            />
+            {/* Tab kinh doanh hiển thị đồng thời cả hai scope nên toggle này
+                không có gì để lọc — ẩn đi thay vì để một nút bấm vô tác dụng. */}
+            {activeTab !== "biz" && (
+              <Toggle
+                ariaLabel="Chọn nhóm dịch vụ"
+                variant="blue"
+                value={dataScope}
+                onChange={setDataScope}
+                options={[
+                  { value: "SPB", label: "SPB (Bulky)" },
+                  { value: "SPE", label: "SPE (Standard)" },
+                ]}
+              />
+            )}
             <Toggle
               ariaLabel="Chọn kỳ dữ liệu"
               value={dataPeriod}
@@ -96,21 +107,8 @@ export default function ControlTower({ userEmail }: { userEmail: string }) {
           </div>
         </div>
 
-        <div className={styles.freshbar}>
-          {SOURCES.map((source) => (
-            <span key={source}>
-              <span className={styles.ok} />
-              {source}
-            </span>
-          ))}
-          <span className={styles.freshNote}>
-            Trạng thái nguồn dữ liệu — thời điểm cập nhật sẽ hiển thị khi các
-            tab được kết nối dữ liệu thật
-          </span>
-        </div>
-
         {activeTab === "biz" ? (
-          <BizOverview scope={dataScope} />
+          <BizOverview />
         ) : activeTab === "campaign" ? (
           <CampaignOverview scope={dataScope} />
         ) : activeTab === "ops" ? (
@@ -129,6 +127,22 @@ export default function ControlTower({ userEmail }: { userEmail: string }) {
             {...PLACEHOLDERS[activeTab]}
           />
         )}
+
+        <footer className={styles.pageFoot}>
+          {activeTab === "biz" && <BizFootnote />}
+          <div className={styles.freshbar}>
+            {SOURCES.map((source) => (
+              <span key={source}>
+                <span className={styles.ok} />
+                {source}
+              </span>
+            ))}
+            <span className={styles.freshNote}>
+              Trạng thái nguồn dữ liệu — thời điểm cập nhật sẽ hiển thị khi các
+              tab được kết nối dữ liệu thật
+            </span>
+          </div>
+        </footer>
       </main>
     </>
   );

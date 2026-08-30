@@ -7,6 +7,7 @@ import {
   type Lane,
   type WeightBand,
 } from "./bizData";
+import { aopFor, fcFor } from "./targetData";
 import type { DataScope } from "./tabs";
 
 export interface MonthPoint {
@@ -159,4 +160,145 @@ export function formatMonth(month: string) {
 /** "2026-08" -> "T8" — dùng cho nhãn trục X cho gọn. */
 export function formatMonthShort(month: string) {
   return `T${Number(month.split("-")[1])}`;
+}
+
+// ---------------------------------------------------------------------------
+// Đối chiếu mục tiêu: FC cho Created, AOP cho GTTC.
+// ---------------------------------------------------------------------------
+
+
+export interface BandPoint {
+  month: string;
+  /** Sản lượng theo từng nhóm trọng lượng, đúng thứ tự WEIGHT_ORDER. */
+  bands: { band: WeightBand; created: number; gtc: number }[];
+  created: number;
+  gtc: number;
+}
+
+export function monthlyByBand(scope: DataScope): BandPoint[] {
+  return BIZ_MONTHS.map((month) => {
+    const bands = WEIGHT_ORDER.map((band) => {
+      const rows = BIZ_ROWS.filter(
+        (r) => r.scope === scope && r.month === month && r.weight === band,
+      );
+      return { band, created: sum(rows, "created"), gtc: sum(rows, "gtc") };
+    });
+    return {
+      month,
+      bands,
+      created: bands.reduce((a, b) => a + b.created, 0),
+      gtc: bands.reduce((a, b) => a + b.gtc, 0),
+    };
+  });
+}
+
+/** Tỷ lệ hoàn thành; undefined khi tháng đó không có mục tiêu để so. */
+function completion(actual: number, target: number | undefined) {
+  return target === undefined || target === 0 ? undefined : actual / target;
+}
+
+export const fcCompletion = (
+  scope: DataScope,
+  month: string,
+  created: number,
+  band?: WeightBand,
+) => completion(created, fcFor(scope, month, band));
+
+export const aopCompletion = (
+  scope: DataScope,
+  month: string,
+  gtc: number,
+  band?: WeightBand,
+) => completion(gtc, aopFor(scope, month, band));
+
+export interface ProgressStat {
+  gtc: number;
+  target: number;
+  completion: number;
+  /** Nhãn kỳ, ví dụ "T1–T8/2026" hoặc "T8/2026". */
+  periodLabel: string;
+}
+
+export interface ScopeProgress {
+  ytd: ProgressStat;
+  mtd: ProgressStat;
+  /** Chuỗi GTTC theo tháng, dùng vẽ sparkline. */
+  spark: number[];
+}
+
+/** GTTC luỹ kế và GTTC tháng hiện tại, kèm mức hoàn thành so AOP cùng kỳ. */
+export function scopeProgress(scope: DataScope): ScopeProgress {
+  const series = monthlySeries(scope);
+  const latest = series[series.length - 1];
+
+  const ytdGtc = series.reduce((acc, p) => acc + p.gtc, 0);
+  const ytdTarget = series.reduce(
+    (acc, p) => acc + (aopFor(scope, p.month) ?? 0),
+    0,
+  );
+  const mtdTarget = aopFor(scope, latest.month) ?? 0;
+
+  const first = formatMonthShort(series[0].month);
+  const last = formatMonthShort(latest.month);
+
+  return {
+    ytd: {
+      gtc: ytdGtc,
+      target: ytdTarget,
+      completion: ytdTarget === 0 ? 0 : ytdGtc / ytdTarget,
+      periodLabel: `${first}–${last}/2026`,
+    },
+    mtd: {
+      gtc: latest.gtc,
+      target: mtdTarget,
+      completion: mtdTarget === 0 ? 0 : latest.gtc / mtdTarget,
+      periodLabel: `${formatMonth(latest.month)}`,
+    },
+    spark: series.map((p) => p.gtc),
+  };
+}
+
+export interface LaneShareRow {
+  month: string;
+  shares: { lane: Lane; share: number }[];
+  totalCreated: number;
+}
+
+/** Bảng tỷ trọng lane theo tháng: 4 cột tỷ trọng + 1 cột tổng tuyệt đối. */
+export function laneShareByMonth(scope: DataScope): LaneShareRow[] {
+  return BIZ_MONTHS.map((month) => {
+    const rows = BIZ_ROWS.filter((r) => r.scope === scope && r.month === month);
+    const totalCreated = sum(rows, "created");
+    return {
+      month,
+      totalCreated,
+      shares: LANE_ORDER.map((lane) => ({
+        lane,
+        share: ratio(
+          sum(
+            rows.filter((r) => r.lane === lane),
+            "created",
+          ),
+          totalCreated,
+        ),
+      })),
+    };
+  });
+}
+
+export interface BandShareRow {
+  month: string;
+  cells: { band: WeightBand; created: number; share: number }[];
+}
+
+/** Bảng sản lượng + tỷ trọng theo nhóm trọng lượng, mỗi hàng là một tháng. */
+export function bandShareByMonth(scope: DataScope): BandShareRow[] {
+  return monthlyByBand(scope).map((point) => ({
+    month: point.month,
+    cells: point.bands.map((b) => ({
+      band: b.band,
+      created: b.created,
+      share: ratio(b.created, point.created),
+    })),
+  }));
 }

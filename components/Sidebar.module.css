@@ -1,4 +1,5 @@
 .sidebar {
+  transition: width 0.2s ease;
   position: fixed;
   top: 0;
   left: 0;
@@ -189,5 +190,75 @@
 @media (prefers-reduced-motion: reduce) {
   .sidebar {
     transition: none;
+  }
+}
+
+/* ---- Thu gọn mục lục (chỉ áp dụng từ 901px trở lên) ---- */
+
+.collapseBtn {
+  position: absolute;
+  top: 22px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.collapseBtn:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+@media (min-width: 901px) {
+  .collapseBtn {
+    display: flex;
+  }
+
+  .collapsed {
+    width: var(--sidebar-w-collapsed);
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  /* Mũi tên quay 180 độ khi đang thu gọn để chỉ hướng mở ra. */
+  .collapsed .collapseBtn {
+    transform: rotate(180deg);
+    right: 50%;
+    margin-right: -11px;
+  }
+
+  /* Ở trạng thái thu gọn chỉ còn chấm tròn của từng mục. */
+  .collapsed .brand > div:last-child,
+  .collapsed .groupLabel,
+  .collapsed .head > span:not(.dot),
+  .collapsed .chev,
+  .collapsed .children,
+  .collapsed .meta {
+    display: none;
+  }
+
+  .collapsed .brand {
+    justify-content: center;
+    padding: 34px 0 18px;
+  }
+
+  .collapsed .head {
+    justify-content: center;
+    padding: 12px 0;
+  }
+
+  .collapsed .dot {
+    width: 9px;
+    height: 9px;
   }
 }

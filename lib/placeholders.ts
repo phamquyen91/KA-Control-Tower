@@ -19,7 +19,7 @@ export const PLACEHOLDERS: Record<
       "Giá trị đền bù theo tuần và theo tháng, bóc tách theo loại yêu cầu cho SPB / SPE / SPE Reverse, kèm FC miễn cước.",
     planned: [
       "Grand Total đền bù theo tháng và biến động MoM",
-      "Tổng quan giá trị đền bù theo tuần cho SPE Express và Shopee Bulky",
+      "Tổng quan giá trị đền bù theo tuần cho Shopee Standard và Shopee Bulky",
       "Bảng phân tích theo loại đền bù × nhóm khách hàng (SPB / SPE / Reverse)",
       "FC miễn cước Pickup & Delivery, phân tích đền bù theo ngành hàng",
     ],

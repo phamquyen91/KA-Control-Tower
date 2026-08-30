@@ -190,3 +190,22 @@ export const BIZ_ROWS: BizRow[] = RAW.map(
 export const BIZ_MONTHS: string[] = [
   ...new Set(BIZ_ROWS.map((r) => r.month)),
 ].sort();
+
+/**
+ * Nhãn hiển thị của client. "Shopee Standard" là tên gọi thống nhất trên giao
+ * diện — trong dữ liệu nguồn nó là "Shopee Express", đổi tên để không lẫn với
+ * client khác.
+ */
+export const SCOPE_LABEL: Record<DataScope, string> = {
+  SPB: "Shopee Bulky",
+  SPE: "Shopee Standard",
+};
+
+/**
+ * Nhãn nhóm trọng lượng đọc theo scope: với Bulky đơn nhẹ nhất đã là 10kg nên
+ * "<15kg" thực chất là 10–15kg.
+ */
+export function bandLabel(band: WeightBand, scope: DataScope) {
+  if (scope === "SPB") return band === "<15kg" ? "10–15kg" : "15kg++";
+  return band === "<15kg" ? "<15kg" : "≥15kg";
+}

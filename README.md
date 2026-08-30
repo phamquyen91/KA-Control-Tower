@@ -16,7 +16,7 @@ Mở http://localhost:3000.
 
 | Tab | Trạng thái | Nguồn dữ liệu |
 | --- | --- | --- |
-| **Tình hình kinh doanh** | **Đã dựng** | Sheet `tower control raw` · `raw tab 1` |
+| **Tình hình kinh doanh** | **Đã dựng** | `raw tab 1` + FC xlsx + AOP |
 | **Sức khoẻ vận hành** | **Nhúng app báo cáo KAS qua iframe** | kas-shopee-performance |
 | Khiếu nại | Placeholder | — |
 | Đền bù | Placeholder | — |
@@ -24,6 +24,22 @@ Mở http://localhost:3000.
 | Quản trị công việc KA-SPE | Placeholder | — |
 
 Các tab placeholder liệt kê sẵn nội dung dự kiến để triển khai sau.
+
+## Mục tiêu: FC và AOP
+
+Hai loại mục tiêu khác nhau về ý nghĩa, đừng dùng lẫn:
+
+| Loại | Đối chiếu với | Nguồn |
+| --- | --- | --- |
+| **FC** | Created volume | Dòng `Total` (= Pickup + Dropoff) trong các file `GHN_*_Forecast *.xlsx` |
+| **AOP** | GTTC volume | Bảng target AOP 2026 (dòng `SHOPEE` = Shopee Standard) |
+
+Sinh ra `lib/targetData.ts`. **FC của Bulky chỉ có từ T4/2026** — thư mục nguồn
+không có file FC tháng 1–3, nên đường hoàn thành bỏ trống ở các tháng đó thay vì
+vẽ 0%.
+
+AOP chép tay từ bảng target nên đã tự kiểm tra: mọi tháng `10-15kg + 15kg++` khớp
+đúng dòng tổng Bulky, và tổng 12 tháng khớp cột FY (lệch 1 đơn vị do làm tròn).
 
 ## Dữ liệu từ Google Sheet
 
