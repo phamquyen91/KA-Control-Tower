@@ -71,6 +71,27 @@ domain, set biến môi trường:
 NEXT_PUBLIC_KAS_ORIGIN=https://domain-moi.example.com
 ```
 
+### Khi khung báo cáo hiện trang lỗi Google
+
+App nguồn lấy dữ liệu từ một Google Sheet:
+
+```
+https://docs.google.com/spreadsheets/d/<sheetId>/export?format=csv&gid=<gid>
+```
+
+Sheet này **không công khai** (truy cập ẩn danh trả `401`). Khi không đọc được,
+app nguồn tự điều hướng iframe sang `docs.google.com`, và trang lỗi của Google
+chiếm nguyên khung báo cáo — dễ bị hiểu nhầm là lỗi của Control Tower.
+
+Component phát hiện việc này bằng cách đếm số lần iframe phát sự kiện `load`
+(cross-origin nên không đọc được `location`; SPA đổi route không phát `load`,
+chỉ điều hướng thật mới phát). Từ lần thứ hai trở đi thì hiện panel giải thích
+kèm nút tải lại khung.
+
+Khắc phục: nhờ team KAS cấp quyền đọc sheet nguồn cho tài khoản Google của
+người dùng. Nếu trình duyệt đăng nhập nhiều tài khoản Google, thử cửa sổ ẩn danh
+để loại trừ việc Google chọn nhầm tài khoản.
+
 ### Việc cần phía team KAS
 
 App nguồn phải khai báo `frame-ancestors` trong CSP cho domain thật của Control

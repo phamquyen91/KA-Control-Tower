@@ -27,7 +27,7 @@ const IFRAME_SIZER_MESSAGE = /^\[iFrameSizer\][^:]+:([\d.]+):[\d.]+:/;
 // còn render bất đồng bộ, nên thúc vài nhịp để bắt được chiều cao cuối cùng.
 const RESIZE_NUDGES_MS = [300, 1500, 3500];
 
-type EmbedState = "loading" | "connected" | "unreachable";
+type EmbedState = "loading" | "connected" | "unreachable" | "navigated";
 
 interface OpsHealthIframeProps {
   scope: DataScope;
@@ -43,6 +43,11 @@ export default function OpsHealthIframe({
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [embedState, setEmbedState] = useState<EmbedState>("loading");
   const [hostOrigin, setHostOrigin] = useState("");
+  // App nguồn tự điều hướng iframe sang docs.google.com khi không đọc được
+  // Google Sheet nguồn, và trang lỗi của Google chiếm nguyên khung báo cáo.
+  // Cross-origin nên không đọc được location; đếm số lần `load` thay thế:
+  // SPA đổi route không phát `load`, chỉ điều hướng thật mới phát.
+  const loadCountRef = useRef(0);
 
   // Query string chỉ áp dụng cho lần mount đầu tiên. App nguồn hiện mới hỗ trợ
   // ?scope=spb|spe; ?period=day|month sẽ bị ignore (không lỗi) cho tới khi bên
@@ -129,6 +134,27 @@ export default function OpsHealthIframe({
     };
   }, [isLoaded]);
 
+  function handleLoad() {
+    loadCountRef.current += 1;
+    if (loadCountRef.current > 1) {
+      setEmbedState("navigated");
+      return;
+    }
+    setIsLoaded(true);
+    setHasLoadedOnce(true);
+  }
+
+  function reloadFrame() {
+    const el = iframeRef.current;
+    if (!el) return;
+    loadCountRef.current = 0;
+    setIsLoaded(false);
+    setHasLoadedOnce(false);
+    setEmbedState("loading");
+    el.style.height = "";
+    el.src = src;
+  }
+
   return (
     <div className={styles.embed}>
       {!isLoaded && (
@@ -165,14 +191,45 @@ export default function OpsHealthIframe({
         </div>
       )}
 
+      {embedState === "navigated" && (
+        <div className={styles.notice} role="alert">
+          <div className={styles.noticeTitle}>
+            Khung báo cáo đã chuyển sang trang khác
+          </div>
+          <p className={styles.noticeBody}>
+            Iframe không còn ở <code>{KAS_ORIGIN}</code> nữa. App báo cáo tự
+            điều hướng sang Google khi không đọc được Google Sheet nguồn — thường
+            là do tài khoản Google đang đăng nhập không có quyền trên sheet đó
+            (Google trả <code>403</code>).
+          </p>
+          <p className={styles.noticeBody}>
+            Cần team KAS cấp quyền đọc sheet nguồn cho tài khoản của bạn. Nếu
+            trình duyệt đang đăng nhập nhiều tài khoản Google, thử lại bằng cửa
+            sổ ẩn danh để loại trừ việc chọn nhầm tài khoản.
+          </p>
+          <button
+            type="button"
+            className={styles.noticeLink}
+            onClick={reloadFrame}
+          >
+            Tải lại khung báo cáo
+          </button>{" "}
+          <a
+            className={styles.noticeLink}
+            href={src}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Mở báo cáo ở tab mới ↗
+          </a>
+        </div>
+      )}
+
       <iframe
         ref={iframeRef}
         src={src}
         title="GHN KAS — Báo Cáo Điều Hành Shopee"
-        onLoad={() => {
-          setIsLoaded(true);
-          setHasLoadedOnce(true);
-        }}
+        onLoad={handleLoad}
         style={{ display: isLoaded ? "block" : "none" }}
         className={styles.iframe}
         // Không set sandbox: app nguồn có login Supabase (OAuth) cần same-origin,
