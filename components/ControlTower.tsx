@@ -8,12 +8,7 @@ import OpsHealthIframe from "./OpsHealthIframe";
 import BizOverview from "./BizOverview";
 import CampaignOverview from "./CampaignOverview";
 import { PLACEHOLDERS } from "@/lib/placeholders";
-import {
-  TAB_TITLES,
-  type DataPeriod,
-  type DataScope,
-  type TabId,
-} from "@/lib/tabs";
+import { TAB_TITLES, type DataScope, type TabId } from "@/lib/tabs";
 import styles from "./ControlTower.module.css";
 
 const SOURCES = [
@@ -26,7 +21,6 @@ const SOURCES = [
 export default function ControlTower({ userEmail }: { userEmail: string }) {
   const [activeTab, setActiveTab] = useState<TabId>("biz");
   const [dataScope, setDataScope] = useState<DataScope>("SPB");
-  const [dataPeriod, setDataPeriod] = useState<DataPeriod>("day");
   // Drawer chỉ có tác dụng <=900px; desktop sidebar luôn hiện.
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isNavCollapsed, setIsNavCollapsed] = useState(false);
@@ -95,15 +89,6 @@ export default function ControlTower({ userEmail }: { userEmail: string }) {
                 ]}
               />
             )}
-            <Toggle
-              ariaLabel="Chọn kỳ dữ liệu"
-              value={dataPeriod}
-              onChange={setDataPeriod}
-              options={[
-                { value: "day", label: "Theo ngày" },
-                { value: "month", label: "Theo tháng" },
-              ]}
-            />
           </div>
         </div>
 
@@ -119,7 +104,7 @@ export default function ControlTower({ userEmail }: { userEmail: string }) {
                 Scope: <b>{dataScope}</b> · Nhúng từ kas-shopee-performance
               </span>
             </div>
-            <OpsHealthIframe scope={dataScope} period={dataPeriod} />
+            <OpsHealthIframe scope={dataScope} />
           </div>
         ) : (
           <Placeholder

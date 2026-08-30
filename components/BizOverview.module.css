@@ -301,7 +301,9 @@
 
 .swLow,
 .swHigh,
-.swPrimary {
+.swPrimary,
+.swLowWarm,
+.swHighWarm {
   width: 10px;
   height: 10px;
   border-radius: 3px;
@@ -318,6 +320,14 @@
 
 .swPrimary {
   background: var(--blue);
+}
+
+.swLowWarm {
+  background: var(--orange-light);
+}
+
+.swHighWarm {
+  background: var(--orange);
 }
 
 .lnTotal,

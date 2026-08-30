@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 // ^4.4.5 (MIT) — cùng bản với app nguồn. KHÔNG dùng v5+ (GPL-3.0/thương mại).
 import { iframeResizer, type IFrameComponent } from "iframe-resizer";
-import type { DataPeriod, DataScope } from "@/lib/tabs";
+import type { DataScope } from "@/lib/tabs";
 import styles from "./OpsHealthIframe.module.css";
 
 const KAS_ORIGIN =
@@ -31,13 +31,14 @@ type EmbedState = "loading" | "connected" | "unreachable" | "navigated";
 
 interface OpsHealthIframeProps {
   scope: DataScope;
-  period: DataPeriod;
 }
 
-export default function OpsHealthIframe({
-  scope,
-  period,
-}: OpsHealthIframeProps) {
+// App nguồn chưa bao giờ hỗ trợ ?period, và toggle ngày/tháng đã bị gỡ khỏi
+// giao diện vì không có tác dụng. Giữ tham số trong URL để không phá hợp đồng
+// đã thống nhất với team KAS, cố định ở "day".
+const DEFAULT_PERIOD = "day";
+
+export default function OpsHealthIframe({ scope }: OpsHealthIframeProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
@@ -53,7 +54,7 @@ export default function OpsHealthIframe({
   // ?scope=spb|spe; ?period=day|month sẽ bị ignore (không lỗi) cho tới khi bên
   // kas-shopee-performance bổ sung toggle ngày/tháng ở mức global.
   const [src] = useState(
-    () => `${KAS_ORIGIN}/?scope=${scope.toLowerCase()}&period=${period}`,
+    () => `${KAS_ORIGIN}/?scope=${scope.toLowerCase()}&period=${DEFAULT_PERIOD}`,
   );
 
   // Đổi scope/period sau khi iframe đã load: dùng postMessage thay vì đổi src
@@ -75,7 +76,7 @@ export default function OpsHealthIframe({
       600,
     );
     return () => window.clearTimeout(timer);
-  }, [scope, period, hasLoadedOnce]);
+  }, [scope, hasLoadedOnce]);
 
   // Auto-resize theo chiều cao nội dung thật. App nguồn đã nhúng sẵn script
   // "child" của iframe-resizer, phía này chỉ cần gọi iframeResizer() lên element.

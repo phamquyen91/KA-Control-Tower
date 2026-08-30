@@ -67,6 +67,7 @@
   color: var(--orange);
 }
 
+/* Bộ lạnh — dùng cho Created. */
 .barLow {
   fill: #7aa2c9;
   color: #7aa2c9;
@@ -75,6 +76,17 @@
 .barHigh {
   fill: var(--blue);
   color: var(--blue);
+}
+
+/* Bộ ấm — dùng cho GTTC, để hai loại sản lượng phân biệt được ngay từ màu. */
+.barLowWarm {
+  fill: var(--orange-light);
+  color: var(--orange-light);
+}
+
+.barHighWarm {
+  fill: var(--orange);
+  color: var(--orange);
 }
 
 .lineTotal {

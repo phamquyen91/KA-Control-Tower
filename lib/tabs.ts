@@ -7,7 +7,6 @@ export type TabId =
   | "tms";
 
 export type DataScope = "SPB" | "SPE";
-export type DataPeriod = "day" | "month";
 
 export interface NavBlock {
   id: string;

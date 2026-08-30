@@ -11,8 +11,10 @@ import type { WeightBand } from "./labels";
 //          target AOP 2026 (dòng SHOPEE = Shopee Standard, SHOPEE Bulky đã
 //          tách sẵn 2 block weight).
 //
-// LƯU Ý PHỦ DỮ LIỆU: FC của Bulky chỉ có từ T4/2026 — thư mục nguồn không có
-// file FC tháng 1-3. Giao diện phải bỏ trống điểm line thay vì vẽ 0%.
+// LƯU Ý PHỦ DỮ LIỆU: Standard có FC đủ T1-T8/2026, Bulky chỉ có từ T4 —
+// thư mục nguồn không có file FC Bulky của tháng 1-3. Tháng nào thiếu FC thì
+// đường hoàn thành bỏ trống, tuyệt đối không vẽ 0%: vẽ 0% sẽ bị đọc thành
+// hụt chỉ tiêu 100%.
 
 /** Mục tiêu theo tháng. `band` là "total" khi mục tiêu không tách block weight. */
 export interface TargetRow {

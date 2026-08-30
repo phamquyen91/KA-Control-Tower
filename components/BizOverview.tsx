@@ -440,6 +440,9 @@ function ScopeCell({
 
   const isCreated = kind === "created";
   const target = isCreated ? "FC" : "AOP";
+  // Created dùng bộ lạnh, GTTC dùng bộ cam — nhìn màu là biết đang xem loại nào.
+  const lowClass = isCreated ? chart.barLow : chart.barLowWarm;
+  const highClass = isCreated ? chart.barHigh : chart.barHighWarm;
 
   const bars: BarSegment[][] = data.points.map((p) =>
     stacked
@@ -447,7 +450,7 @@ function ScopeCell({
           key: b.band,
           label: bandLabel(b.band, scope),
           value: isCreated ? b.created : b.gtc,
-          className: b.band === "<15kg" ? chart.barLow : chart.barHigh,
+          className: b.band === "<15kg" ? lowClass : highClass,
         }))
       : [
           {
@@ -485,7 +488,14 @@ function ScopeCell({
       scope={scope}
       title={isCreated ? "Created Volume" : "GTTC Volume"}
       note={`Cột: sản lượng ${isCreated ? "Created" : "GTTC"} · Đường: mức hoàn thành so ${target} tháng`}
-      legend={<Legend scope={scope} stacked={stacked} target={target} />}
+      legend={
+        <Legend
+          scope={scope}
+          stacked={stacked}
+          target={target}
+          warm={!isCreated}
+        />
+      }
     >
       <VolumeChart
         months={months}
@@ -531,23 +541,36 @@ function Legend({
   scope,
   stacked,
   target,
+  warm,
 }: {
   scope: DataScope;
   stacked: boolean;
   target: "FC" | "AOP";
+  /** true = chart GTTC, dùng bộ màu cam cho ô chú giải. */
+  warm: boolean;
 }) {
   return (
     <div className={styles.legend}>
       {stacked ? (
         WEIGHT_ORDER.map((band) => (
           <span key={band}>
-            <i className={band === "<15kg" ? styles.swLow : styles.swHigh} />
+            <i
+              className={
+                band === "<15kg"
+                  ? warm
+                    ? styles.swLowWarm
+                    : styles.swLow
+                  : warm
+                    ? styles.swHighWarm
+                    : styles.swHigh
+              }
+            />
             {bandLabel(band, scope)}
           </span>
         ))
       ) : (
         <span>
-          <i className={styles.swPrimary} />
+          <i className={warm ? styles.swHighWarm : styles.swPrimary} />
           Sản lượng
         </span>
       )}
