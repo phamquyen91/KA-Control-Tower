@@ -44,10 +44,15 @@ Cơ chế đồng bộ với app nguồn:
   nhúng sẵn script phía child. Container chỉ giữ `min-height: 400px` để không co
   về 0px trước lần resize đầu — không set cứng chiều cao lớn.
 - **`heightCalculationMethod: 'lowestElement'`** — không dùng mặc định
-  `bodyOffset`. Với layout của app nguồn, `bodyOffset` đo ra `0`, khiến resizer
-  set `height: 0px` và báo cáo biến thành khung trắng dù đã load xong.
-  `lowestElement` duyệt DOM tìm điểm thấp nhất nên không phụ thuộc chiều cao
-  body. Kèm `minHeight: 600` làm lưới an toàn nếu child báo về số bất thường.
+  `bodyOffset`. Với layout của app nguồn, `bodyOffset` đo ra `0`.
+  `lowestElement` duyệt DOM tìm điểm thấp nhất nên đo đúng (~1970px).
+- **Tự áp chiều cao thay vì để lib làm.** Child đo đúng và gửi lên message
+  `[iFrameSizer]<id>:<height>:<width>:<type>`, nhưng phần parent của v4 không áp
+  dụng cho app này — iframe kẹt ở mức sàn dù message báo 1970px. Component tự
+  lắng nghe message đó (lọc theo `event.origin`) rồi set `height`. Vẫn phải gọi
+  `iframeResizer()` vì child chỉ chịu đo cho parent nào đã init nó.
+- **Thúc đo lại** ở các mốc 300/1500/3500ms sau khi load, và 600ms sau mỗi lần
+  đổi scope — child không tự đo lại khi nội dung render bất đồng bộ xong.
 - **Khi nhúng không lên được**: nếu sau `HANDSHAKE_TIMEOUT_MS` (6s) mà child của
   `iframe-resizer` chưa bắt tay, component hiện panel cảnh báo thay cho màn hình
   trắng câm — nêu nguyên nhân, in ra đúng origin cần whitelist, kèm nút mở báo

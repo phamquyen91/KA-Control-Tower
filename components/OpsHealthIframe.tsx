@@ -19,6 +19,14 @@ const HANDSHAKE_TIMEOUT_MS = 6000;
 // mức này. Chống hẳn trường hợp báo cáo bị collapse thành khung trắng.
 const MIN_EMBED_HEIGHT = 600;
 
+// Format message child của iframe-resizer 4.x gửi lên parent:
+//   [iFrameSizer]<iframeId>:<height>:<width>:<type>
+const IFRAME_SIZER_MESSAGE = /^\[iFrameSizer\][^:]+:([\d.]+):[\d.]+:/;
+
+// Child chỉ đo lại khi được yêu cầu hoặc khi DOM đổi. Sau lần load đầu nội dung
+// còn render bất đồng bộ, nên thúc vài nhịp để bắt được chiều cao cuối cùng.
+const RESIZE_NUDGES_MS = [300, 1500, 3500];
+
 type EmbedState = "loading" | "connected" | "unreachable";
 
 interface OpsHealthIframeProps {
@@ -47,12 +55,21 @@ export default function OpsHealthIframe({
   // (đổi src sẽ reload iframe và mất state/scroll đang xem).
   useEffect(() => {
     if (!hasLoadedOnce) return;
-    iframeRef.current?.contentWindow?.postMessage(
+    const el = iframeRef.current;
+    el?.contentWindow?.postMessage(
       { source: "control-tower", type: "set-scope", scope },
       KAS_ORIGIN,
     );
     // { source: 'control-tower', type: 'set-period', period } — gửi kèm khi app
     // nguồn đã hỗ trợ lắng nghe.
+
+    // Đổi scope => nội dung khác => chiều cao khác. Thúc child đo lại sau khi
+    // nó kịp render xong scope mới.
+    const timer = window.setTimeout(
+      () => (el as IFrameComponent | null)?.iFrameResizer?.resize(),
+      600,
+    );
+    return () => window.clearTimeout(timer);
   }, [scope, period, hasLoadedOnce]);
 
   // Auto-resize theo chiều cao nội dung thật. App nguồn đã nhúng sẵn script
@@ -61,19 +78,40 @@ export default function OpsHealthIframe({
     const el = iframeRef.current;
     if (!isLoaded || !el) return;
 
+    // Vẫn cần iframeResizer() để bắt tay: child chỉ chịu đo và gửi chiều cao cho
+    // parent nào đã init nó.
     iframeResizer(
       {
         checkOrigin: [KAS_ORIGIN],
         log: false,
         // 'bodyOffset' (mặc định) đo layout app nguồn ra 0 => iframe collapse
         // còn khung trắng. 'lowestElement' duyệt DOM tìm điểm thấp nhất thay vì
-        // dựa vào chiều cao body, nên không bị vấn đề đó.
+        // dựa vào chiều cao body nên đo đúng.
         heightCalculationMethod: "lowestElement",
-        minHeight: MIN_EMBED_HEIGHT,
         // Bắt tay thành công => nhúng chắc chắn hiển thị được.
         onInit: () => setEmbedState("connected"),
       },
       el,
+    );
+
+    // Child tính đúng chiều cao và gửi lên, nhưng phần parent của v4 không áp
+    // dụng cho app này — iframe kẹt nguyên ở mức sàn dù message báo 1970px. Tự
+    // đọc message và set height, thay vì phụ thuộc vào phần đó của lib.
+    const applyReportedHeight = (event: MessageEvent) => {
+      if (event.origin !== KAS_ORIGIN) return;
+      const match = IFRAME_SIZER_MESSAGE.exec(String(event.data));
+      if (!match) return;
+      const reported = Math.ceil(Number.parseFloat(match[1]));
+      if (!Number.isFinite(reported) || reported <= 0) return;
+      el.style.height = `${Math.max(reported, MIN_EMBED_HEIGHT)}px`;
+    };
+    window.addEventListener("message", applyReportedHeight);
+
+    const nudges = RESIZE_NUDGES_MS.map((delay) =>
+      window.setTimeout(
+        () => (el as IFrameComponent).iFrameResizer?.resize(),
+        delay,
+      ),
     );
 
     const timer = window.setTimeout(() => {
@@ -85,6 +123,8 @@ export default function OpsHealthIframe({
 
     return () => {
       window.clearTimeout(timer);
+      nudges.forEach(window.clearTimeout);
+      window.removeEventListener("message", applyReportedHeight);
       (el as IFrameComponent).iFrameResizer?.close();
     };
   }, [isLoaded]);
