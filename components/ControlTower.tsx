@@ -6,6 +6,7 @@ import Toggle from "./Toggle";
 import Placeholder from "./Placeholder";
 import OpsHealthIframe from "./OpsHealthIframe";
 import BizOverview from "./BizOverview";
+import CampaignOverview from "./CampaignOverview";
 import { PLACEHOLDERS } from "@/lib/placeholders";
 import {
   TAB_TITLES,
@@ -110,6 +111,8 @@ export default function ControlTower({ userEmail }: { userEmail: string }) {
 
         {activeTab === "biz" ? (
           <BizOverview scope={dataScope} />
+        ) : activeTab === "campaign" ? (
+          <CampaignOverview scope={dataScope} />
         ) : activeTab === "ops" ? (
           <div className={styles.section}>
             <div className={styles.sectionTitle}>

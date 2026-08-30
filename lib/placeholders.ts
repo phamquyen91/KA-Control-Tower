@@ -1,7 +1,7 @@
 import type { TabId } from "./tabs";
 
 export const PLACEHOLDERS: Record<
-  Exclude<TabId, "ops" | "biz">,
+  Exclude<TabId, "ops" | "biz" | "campaign">,
   { description: string; planned: string[] }
 > = {
   khieunai: {
@@ -22,16 +22,6 @@ export const PLACEHOLDERS: Record<
       "Tổng quan giá trị đền bù theo tuần cho SPE Express và Shopee Bulky",
       "Bảng phân tích theo loại đền bù × nhóm khách hàng (SPB / SPE / Reverse)",
       "FC miễn cước Pickup & Delivery, phân tích đền bù theo ngành hàng",
-    ],
-  },
-  campaign: {
-    description:
-      "Kết quả các campaign Double Day: sản lượng ngày D và D+1, KPI Pickup/Delivery, so sánh với FC và ngày thường.",
-    planned: [
-      "Record Double Day theo từng kỳ campaign, tách Bulky / Express",
-      "Biểu đồ cột chồng sản lượng ngày D và D+1",
-      "Bảng KPI campaign: % Pickup, % Delivery, tỷ lệ fail, mức tăng so ngày thường",
-      "Top 5 tỉnh theo Pickup và theo Delivery cho từng kỳ campaign",
     ],
   },
   tms: {

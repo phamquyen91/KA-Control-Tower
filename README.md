@@ -14,16 +14,38 @@ Mở http://localhost:3000.
 
 ## Trạng thái các tab
 
-| Tab | Trạng thái |
-| --- | --- |
-| Tình hình kinh doanh | Placeholder |
-| **Sức khoẻ vận hành** | **Đã nhúng app báo cáo KAS qua iframe** |
-| Khiếu nại | Placeholder |
-| Đền bù | Placeholder |
-| Campaign Shopee | Placeholder |
-| Quản trị công việc KA-SPE | Placeholder |
+| Tab | Trạng thái | Nguồn dữ liệu |
+| --- | --- | --- |
+| **Tình hình kinh doanh** | **Đã dựng** | Sheet `tower control raw` · `raw tab 1` |
+| **Sức khoẻ vận hành** | **Nhúng app báo cáo KAS qua iframe** | kas-shopee-performance |
+| Khiếu nại | Placeholder | — |
+| Đền bù | Placeholder | — |
+| **Campaign Shopee** | **Đã dựng** | Sheet `tower control raw` · `raw tab 2` |
+| Quản trị công việc KA-SPE | Placeholder | — |
 
 Các tab placeholder liệt kê sẵn nội dung dự kiến để triển khai sau.
+
+## Dữ liệu từ Google Sheet
+
+Hai tab đã dựng đọc từ sheet [`tower control raw`](https://docs.google.com/spreadsheets/d/1WI5CrcFrTgDR4FNS8Un9RR-oHEvkdJWCj8OUTc2BFtk/edit).
+Dữ liệu để ở dạng **snapshot tĩnh** trong `lib/bizData.ts` và `lib/campaignData.ts`,
+**không fetch lúc chạy**: sheet không công khai (truy cập ẩn danh trả `401`), nên
+fetch phía trình duyệt sẽ dính đúng lỗi `403` mà tab Sức khoẻ vận hành đang gặp.
+
+Cách cập nhật khi có số mới: xuất tab tương ứng ra CSV rồi sinh lại file dữ liệu.
+`raw tab 2` có ~19.4k dòng ma trận tỉnh-đi × tỉnh-đến, nên `campaignData.ts` chỉ
+giữ số **đã tổng hợp** ở mức kỳ campaign và mức tỉnh, không giữ dữ liệu thô.
+
+### Những chỗ dễ đọc sai, đã xử lý sẵn trong giao diện
+
+- **Tháng cuối chưa đủ tháng.** Snapshot chốt 19/08 nên T8/2026 khuyết ngày; chỉ
+  số MoM đang so tháng khuyết với tháng đủ. Giao diện ghi rõ để không ai đọc
+  `-28%` thành sụt giảm thật.
+- **Baseline chỉ có ở D0.** Trong `raw tab 2`, dữ liệu ngày thường không có D+1,
+  nên so sánh campaign với ngày thường bắt buộc là CP D0 ↔ baseline D0.
+- **ODR tính theo trọng số đơn**, không lấy trung bình cộng ODR các tỉnh.
+- **Bảng xếp hạng tỉnh có ngưỡng mẫu tối thiểu 300 đơn** — dưới mức đó vài đơn
+  cũng đủ đẩy ODR về 0% hoặc 100% và chiếm hết top.
 
 ## Tab "Sức khoẻ vận hành" — nhúng app kas-shopee-performance
 
