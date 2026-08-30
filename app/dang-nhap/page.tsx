@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth, signIn } from "@/auth";
-import { isAllowed } from "@/lib/allowlist";
+import { canSignIn } from "@/lib/access";
 import Link from "next/link";
 import styles from "./page.module.css";
 
@@ -16,7 +16,7 @@ export default async function SignInPage({
   const error = typeof params.error === "string" ? params.error : undefined;
 
   // Đã đăng nhập và có quyền thì không việc gì phải ở lại trang này.
-  if (session?.user && isAllowed(session.user.email)) redirect("/");
+  if (session?.user && canSignIn(session.user.email)) redirect("/");
 
   return (
     <main className={styles.wrap}>
@@ -27,8 +27,8 @@ export default async function SignInPage({
 
         {error === "AccessDenied" ? (
           <p className={styles.error}>
-            Tài khoản vừa dùng không nằm trong danh sách được cấp quyền. Liên hệ
-            người quản trị Control Tower để được bổ sung.
+            Control Tower chỉ mở cho tài khoản Google có đuôi{" "}
+            <b>@ghn.vn</b>. Tài khoản vừa dùng không thuộc domain này.
           </p>
         ) : error ? (
           // Không nuốt lỗi: nếu chỉ đá người dùng về đây kèm màn hình đăng nhập
@@ -50,8 +50,9 @@ export default async function SignInPage({
           </p>
         ) : (
           <p className={styles.text}>
-            Một số tab chứa số liệu kinh doanh nên chỉ mở cho tài khoản được cấp
-            quyền. Đăng nhập bằng tài khoản Google công ty để tiếp tục.
+            Control Tower chỉ dành cho tài khoản Google <b>@ghn.vn</b>. Riêng
+            tab Tình hình kinh doanh còn giới hạn thêm trong một danh sách hẹp
+            hơn.
           </p>
         )}
 

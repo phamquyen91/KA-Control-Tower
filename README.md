@@ -25,9 +25,40 @@ Mở http://localhost:3000.
 
 Các tab placeholder liệt kê sẵn nội dung dự kiến để triển khai sau.
 
-## Phân quyền tab "Tình hình kinh doanh"
+## Phân quyền
 
-Tab này chứa số liệu kinh doanh nên chỉ mở cho một số tài khoản. Cơ chế:
+Hai tầng, định nghĩa ở `lib/access.ts`:
+
+| Tầng | Hàm | Chặn theo | Áp dụng cho |
+| --- | --- | --- | --- |
+| 1 | `canSignIn` | Domain email — chỉ `@ghn.vn` | Toàn bộ app |
+| 2 | `canViewBiz` | Danh sách email cụ thể | Tab Tình hình kinh doanh |
+
+Tầng 2 gọi tầng 1 bên trong, nên dù ai đó lỡ thêm email ngoài `@ghn.vn` vào danh
+sách tab kinh doanh thì cửa domain vẫn chặn.
+
+So khớp domain là **chính xác**, không phải so hậu tố — `ke.gian@ghn.vn.attacker.com`
+và `ke.gian@xghn.vn` đều bị từ chối.
+
+Ghi đè bằng biến môi trường mà không cần sửa code: `SIGNIN_ALLOWED_DOMAINS` và
+`BIZ_ALLOWED_EMAILS` (các giá trị cách nhau dấu phẩy).
+
+### Cửa tầng 1 nằm ở đâu
+
+`proxy.ts` ở gốc dự án. **Next.js 16 đã đổi tên `middleware.ts` thành `proxy.ts`**,
+hàm export cũng đổi theo — xem
+`node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/proxy.md`.
+
+Matcher loại trừ `/api` có chủ đích: để các route API tự trả mã lỗi đúng nghĩa.
+Nếu để proxy chặn, `fetch` từ giao diện sẽ nhận HTML trang đăng nhập kèm mã 200
+thay vì 401, và chỗ gọi sẽ vỡ khi parse JSON.
+
+Hai trang mở công khai: `/dang-nhap` (chặn thì thành vòng lặp chuyển hướng) và
+`/privacy` (Google trỏ link tới đây từ màn hình đồng ý).
+
+### Tầng 2 — tab "Tình hình kinh doanh"
+
+Cơ chế:
 
 1. **Đăng nhập Google** qua Auth.js (`auth.ts`). Callback `signIn` chặn ngay ở
    bước đăng nhập — email ngoài allowlist không tạo được session.

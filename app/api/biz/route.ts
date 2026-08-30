@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { isAllowed } from "@/lib/allowlist";
+import { canViewBiz } from "@/lib/access";
 import { buildBizPayload } from "@/lib/bizViewModel";
 
 /**
  * Cổng duy nhất để giao diện lấy số liệu tab Tình hình kinh doanh.
  *
- * Kiểm tra hai lớp: có session hay không, và email có trong allowlist hay
- * không. Lớp thứ hai không thừa — allowlist có thể bị rút gọn sau khi ai đó
- * đã đăng nhập, và session cũ vẫn còn hiệu lực cho tới khi hết hạn.
+ * Route này KHÔNG nằm sau proxy (matcher đã loại trừ /api) nên phải tự kiểm
+ * tra, và trả đúng mã lỗi thay vì chuyển hướng — giao diện cần phân biệt
+ * "chưa đăng nhập" với "đăng nhập rồi nhưng không đủ quyền".
+ *
+ * `canViewBiz` đã bao gồm cả cửa domain bên trong, nên nó chặt hơn cửa vào app.
  */
 export async function GET() {
   const session = await auth();
@@ -20,7 +22,7 @@ export async function GET() {
     );
   }
 
-  if (!isAllowed(session.user.email)) {
+  if (!canViewBiz(session.user.email)) {
     return NextResponse.json(
       {
         error: "forbidden",

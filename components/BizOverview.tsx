@@ -152,8 +152,8 @@ function Gate({
       <div className={styles.gate}>
         <h2 className={styles.gateTitle}>Cần đăng nhập</h2>
         <p className={styles.gateText}>
-          Tab này chứa số liệu kinh doanh nên chỉ mở cho một số tài khoản được
-          cấp quyền. Đăng nhập bằng tài khoản Google công ty để xem.
+          Tab này chứa số liệu kinh doanh nên chỉ mở cho một số tài khoản
+          @ghn.vn được cấp quyền riêng. Đăng nhập để xem.
         </p>
         <button
           type="button"
@@ -173,8 +173,8 @@ function Gate({
         <p className={styles.gateText}>
           {email ? (
             <>
-              Tài khoản <code>{email}</code> không nằm trong danh sách được xem
-              tab này.
+              Tài khoản <code>{email}</code> vào được Control Tower nhưng không
+              nằm trong danh sách được xem tab này.
             </>
           ) : (
             "Tài khoản đang đăng nhập không nằm trong danh sách được xem tab này."
