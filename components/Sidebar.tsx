@@ -94,11 +94,7 @@ export default function Sidebar({
         );
       })}
 
-      <div className={styles.meta}>
-        Đăng nhập: {userEmail}
-        <br />
-        Vai trò: Head of KA Scommerce · F1 Saturn Leader
-      </div>
+      <div className={styles.meta}>Đăng nhập: {userEmail}</div>
     </nav>
   );
 }
