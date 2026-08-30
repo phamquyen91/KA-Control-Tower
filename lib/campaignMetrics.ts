@@ -1,3 +1,5 @@
+import "server-only";
+
 import {
   CAMPAIGNS,
   CAMPAIGN_PROVINCES,
@@ -95,9 +97,4 @@ export function provinceRanking(
   )
     .map((r) => ({ province: r.province, ...cell(r.orders, r.ontime) }))
     .sort((a, b) => b.odr - a.odr);
-}
-
-export function formatPp(value: number, digits = 1) {
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${value.toFixed(digits).replace(".", ",")}pp`;
 }

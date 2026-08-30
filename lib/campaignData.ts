@@ -1,7 +1,13 @@
+import "server-only";
+
 import type { DataScope } from "./tabs";
 
 // Nguồn: Google Sheet "tower control raw", tab `raw tab 2` (19.369 dòng thô).
 // https://docs.google.com/spreadsheets/d/1WI5CrcFrTgDR4FNS8Un9RR-oHEvkdJWCj8OUTc2BFtk/edit
+//
+// SỐ LIỆU NỘI BỘ — module đánh dấu `server-only`, build sẽ fail nếu có
+// component client lỡ import. Giao diện lấy số qua /api/campaign, route đó
+// kiểm tra đăng nhập trước khi trả dữ liệu.
 //
 // File này chỉ chứa số đã tổng hợp sẵn, không phải dữ liệu thô: bản thô là
 // ma trận tỉnh-đi × tỉnh-đến nên quá nặng để nhét vào bundle, mà giao diện

@@ -306,3 +306,37 @@
 .rankGrid .table {
   min-width: 0;
 }
+
+/* ---- Trạng thái tải / lỗi ---- */
+
+.gate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 260px;
+  padding: 40px 24px;
+  text-align: center;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+
+.gateSpinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid var(--border);
+  border-top-color: var(--orange);
+  border-radius: 50%;
+  animation: campaign-spin 0.8s linear infinite;
+}
+
+@keyframes campaign-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

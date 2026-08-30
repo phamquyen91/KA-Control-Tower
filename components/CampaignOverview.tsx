@@ -1,53 +1,104 @@
 "use client";
 
-import { useState } from "react";
-import {
-  CAMPAIGNS,
-  CAMPAIGN_SNAPSHOT_AT,
-  type Direction,
-} from "@/lib/campaignData";
-import { BIZ_SOURCE_URL, SCOPE_LABEL } from "@/lib/labels";
-import {
-  campaignRows,
-  formatPp,
-  latestCampaign,
-  provinceRanking,
-  type OdrCell,
-  type ProvinceRow,
-} from "@/lib/campaignMetrics";
-import { formatNumber, formatPercent } from "@/lib/format";
+import { useEffect, useState } from "react";
+import { SCOPE_LABEL } from "@/lib/labels";
+import { formatNumber, formatPercent, formatPp } from "@/lib/format";
+import type { Direction } from "@/lib/campaignData";
+import type {
+  CampaignPayload,
+  CampaignScopePayload,
+} from "@/lib/campaignViewModel";
+import type { CampaignRow, ProvinceRow } from "@/lib/campaignMetrics";
 import type { DataScope } from "@/lib/tabs";
 import Toggle from "./Toggle";
 import styles from "./CampaignOverview.module.css";
 
-// Ngưỡng mẫu tối thiểu cho bảng xếp hạng tỉnh. Dưới mức này ODR nhảy về 0%
-// hoặc 100% chỉ vì vài đơn, lọt vào top thì gây hiểu nhầm.
-const MIN_SAMPLE = 300;
+type LoadState =
+  | { status: "loading" }
+  | { status: "error"; message: string }
+  | { status: "ready"; payload: CampaignPayload };
 
 export default function CampaignOverview({ scope }: { scope: DataScope }) {
-  const [campaign, setCampaign] = useState(latestCampaign());
+  const [state, setState] = useState<LoadState>({ status: "loading" });
+  const [campaign, setCampaign] = useState<string | null>(null);
   const [direction, setDirection] = useState<Direction>("to");
 
-  const rows = campaignRows(scope);
-  const current = rows.find((r) => r.campaign === campaign) ?? rows[0];
+  useEffect(() => {
+    let cancelled = false;
 
-  const ranked = provinceRanking(scope, campaign, direction, "D0", MIN_SAMPLE);
-  const top = ranked.slice(0, 5);
-  const bottom = ranked.slice(-5).reverse();
+    // Số liệu không nằm sẵn trong bundle: phải hỏi /api/campaign, nơi kiểm tra
+    // đăng nhập trước khi trả về.
+    fetch("/api/campaign")
+      .then(async (res) => {
+        if (cancelled) return;
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          return setState({
+            status: "error",
+            message: body?.message ?? `Máy chủ trả lỗi ${res.status}.`,
+          });
+        }
+        const payload = (await res.json()) as CampaignPayload;
+        setState({ status: "ready", payload });
+        setCampaign((prev) => prev ?? payload.latestCampaign);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setState({
+            status: "error",
+            message:
+              err instanceof Error ? err.message : "Không gọi được API.",
+          });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (state.status === "loading") {
+    return (
+      <div className={styles.gate} role="status" aria-live="polite">
+        <div className={styles.gateSpinner} />
+        <p>Đang tải số liệu campaign…</p>
+      </div>
+    );
+  }
+
+  if (state.status === "error") {
+    return (
+      <div className={styles.gate}>
+        <p>{state.message}</p>
+      </div>
+    );
+  }
+
+  const { payload } = state;
+  const data: CampaignScopePayload = payload.scopes[scope];
+  const activeCampaign = campaign ?? payload.latestCampaign;
+
+  const rows = data.rows;
+  const current =
+    rows.find((r) => r.campaign === activeCampaign) ?? rows[0];
+  const ranking = data.rankings[activeCampaign]?.[direction];
+  const top = ranking?.top ?? [];
+  const bottom = ranking?.bottom ?? [];
+  const qualified = ranking?.qualified ?? 0;
 
   return (
     <div className={styles.wrap}>
       <section className={styles.card}>
         <div className={styles.cardHead}>
           <h2>
-            {campaign} — {SCOPE_LABEL[scope]}
+            {activeCampaign} — {SCOPE_LABEL[scope]}
           </h2>
           <span className={styles.source}>
             Nguồn:{" "}
-            <a href={BIZ_SOURCE_URL} target="_blank" rel="noopener noreferrer">
+            <a href={payload.sourceUrl} target="_blank" rel="noopener noreferrer">
               tower control raw · raw tab 2 ↗
             </a>{" "}
-            · snapshot {CAMPAIGN_SNAPSHOT_AT}
+            · snapshot {payload.snapshotAt}
           </span>
         </div>
 
@@ -56,9 +107,9 @@ export default function CampaignOverview({ scope }: { scope: DataScope }) {
             ariaLabel="Chọn kỳ campaign"
             variant="blue"
             size="sm"
-            value={campaign}
+            value={activeCampaign}
             onChange={setCampaign}
-            options={CAMPAIGNS.map((c) => ({ value: c, label: c }))}
+            options={payload.campaigns.map((c) => ({ value: c, label: c }))}
           />
         </div>
 
@@ -129,7 +180,9 @@ export default function CampaignOverview({ scope }: { scope: DataScope }) {
                 <tr
                   key={row.campaign}
                   className={
-                    row.campaign === campaign ? styles.rowActive : undefined
+                    row.campaign === activeCampaign
+                      ? styles.rowActive
+                      : undefined
                   }
                 >
                   <th scope="row">{row.campaign}</th>
@@ -152,7 +205,7 @@ export default function CampaignOverview({ scope }: { scope: DataScope }) {
 
       <section className={styles.card}>
         <div className={styles.cardHead}>
-          <h2>Tỉnh tốt nhất và kém nhất — {campaign} · D0</h2>
+          <h2>Tỉnh tốt nhất và kém nhất — {activeCampaign} · D0</h2>
           <Toggle
             ariaLabel="Chọn chiều tỉnh"
             size="sm"
@@ -165,10 +218,10 @@ export default function CampaignOverview({ scope }: { scope: DataScope }) {
           />
         </div>
 
-        {ranked.length === 0 ? (
+        {qualified === 0 ? (
           <p className={styles.note}>
-            Không có tỉnh nào đạt tối thiểu {formatNumber(MIN_SAMPLE)} đơn trong
-            mẫu ở kỳ này.
+            Không có tỉnh nào đạt tối thiểu {formatNumber(payload.minSample)} đơn
+            trong mẫu ở kỳ này.
           </p>
         ) : (
           <div className={styles.rankGrid}>
@@ -178,9 +231,10 @@ export default function CampaignOverview({ scope }: { scope: DataScope }) {
         )}
 
         <p className={styles.note}>
-          Chỉ xếp hạng các tỉnh có tối thiểu {formatNumber(MIN_SAMPLE)} đơn
-          trong mẫu — {ranked.length}/35 tỉnh đủ điều kiện ở kỳ này. Tỉnh mẫu
-          nhỏ bị loại vì vài đơn cũng đủ đẩy ODR về 0% hoặc 100%.
+          Chỉ xếp hạng các tỉnh có tối thiểu {formatNumber(payload.minSample)}{" "}
+          đơn trong mẫu — {qualified}/{payload.totalProvinces} tỉnh đủ điều kiện
+          ở kỳ này. Tỉnh mẫu nhỏ bị loại vì vài đơn cũng đủ đẩy ODR về 0% hoặc
+          100%.
         </p>
       </section>
     </div>
@@ -254,11 +308,7 @@ function RankTable({
 }
 
 // Cột nhóm 3 series bằng SVG thuần — cùng cách làm với biểu đồ ở tab kinh doanh.
-function OdrChart({
-  rows,
-}: {
-  rows: { campaign: string; cpD0: OdrCell; cpD1: OdrCell; baselineD0: OdrCell }[];
-}) {
+function OdrChart({ rows }: { rows: CampaignRow[] }) {
   const width = 760;
   const height = 300;
   const padding = { top: 16, right: 12, bottom: 34, left: 52 };

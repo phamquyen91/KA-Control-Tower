@@ -33,3 +33,9 @@ export function formatMonth(month: string) {
 export function formatMonthShort(month: string) {
   return `T${Number(month.split("-")[1])}`;
 }
+
+/** Chênh lệch theo điểm phần trăm, ví dụ "+1,8pp". */
+export function formatPp(value: number, digits = 1) {
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toFixed(digits).replace(".", ",")}pp`;
+}

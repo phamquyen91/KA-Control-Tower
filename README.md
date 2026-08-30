@@ -69,10 +69,21 @@ Cơ chế:
 
 Đây là điểm khiến nó là bảo mật thật chứ không phải tấm rèm: nếu dữ liệu vẫn
 nằm trong bundle thì màn hình đăng nhập chỉ che mắt, mở DevTools là đọc được.
-Kiểm chứng sau mỗi lần build:
+Proxy chặn được *trang* nhưng **không** chặn file tĩnh `_next/static` — ai có
+sẵn URL của chunk vẫn tải được mà không cần đăng nhập.
+
+Vì vậy **cả hai** tab có số liệu đều đi qua route riêng, và các module dữ liệu
+đều `server-only`:
+
+| Tab | Route | Cửa |
+| --- | --- | --- |
+| Tình hình kinh doanh | `/api/biz` | `canViewBiz` (allowlist email) |
+| Campaign Shopee | `/api/campaign` | `canSignIn` (domain @ghn.vn) |
+
+Kiểm chứng sau mỗi lần build — cả ba phải ra `0`:
 
 ```bash
-grep -rl "13887419" .next/static | wc -l   # phải ra 0
+grep -rl "13887419\|249020\|CP 8.8" .next/static | wc -l
 ```
 
 Sửa danh sách email ở `lib/allowlist.ts`, hoặc đặt biến `BIZ_ALLOWED_EMAILS`
