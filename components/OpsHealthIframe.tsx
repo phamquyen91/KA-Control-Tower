@@ -15,6 +15,10 @@ const KAS_ORIGIN =
 // (thường do CSP frame-ancestors bên app nguồn chưa whitelist domain hiện tại).
 const HANDSHAKE_TIMEOUT_MS = 6000;
 
+// Lưới an toàn: dù child báo về chiều cao nào, iframe cũng không co xuống dưới
+// mức này. Chống hẳn trường hợp báo cáo bị collapse thành khung trắng.
+const MIN_EMBED_HEIGHT = 600;
+
 type EmbedState = "loading" | "connected" | "unreachable";
 
 interface OpsHealthIframeProps {
@@ -61,6 +65,11 @@ export default function OpsHealthIframe({
       {
         checkOrigin: [KAS_ORIGIN],
         log: false,
+        // 'bodyOffset' (mặc định) đo layout app nguồn ra 0 => iframe collapse
+        // còn khung trắng. 'lowestElement' duyệt DOM tìm điểm thấp nhất thay vì
+        // dựa vào chiều cao body, nên không bị vấn đề đó.
+        heightCalculationMethod: "lowestElement",
+        minHeight: MIN_EMBED_HEIGHT,
         // Bắt tay thành công => nhúng chắc chắn hiển thị được.
         onInit: () => setEmbedState("connected"),
       },

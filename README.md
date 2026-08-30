@@ -43,6 +43,11 @@ Cơ chế đồng bộ với app nguồn:
 - **Chiều cao**: dùng `iframe-resizer` **4.x (MIT)** phía parent. App nguồn đã
   nhúng sẵn script phía child. Container chỉ giữ `min-height: 400px` để không co
   về 0px trước lần resize đầu — không set cứng chiều cao lớn.
+- **`heightCalculationMethod: 'lowestElement'`** — không dùng mặc định
+  `bodyOffset`. Với layout của app nguồn, `bodyOffset` đo ra `0`, khiến resizer
+  set `height: 0px` và báo cáo biến thành khung trắng dù đã load xong.
+  `lowestElement` duyệt DOM tìm điểm thấp nhất nên không phụ thuộc chiều cao
+  body. Kèm `minHeight: 600` làm lưới an toàn nếu child báo về số bất thường.
 - **Khi nhúng không lên được**: nếu sau `HANDSHAKE_TIMEOUT_MS` (6s) mà child của
   `iframe-resizer` chưa bắt tay, component hiện panel cảnh báo thay cho màn hình
   trắng câm — nêu nguyên nhân, in ra đúng origin cần whitelist, kèm nút mở báo
