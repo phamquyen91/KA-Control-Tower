@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth, signIn } from "@/auth";
 import { isAllowed } from "@/lib/allowlist";
+import Link from "next/link";
 import styles from "./page.module.css";
 
 export const metadata = {
@@ -47,9 +48,9 @@ export default async function SignInPage({
           </button>
         </form>
 
-        <a className={styles.back} href="/">
+        <Link className={styles.back} href="/">
           Quay lại Control Tower
-        </a>
+        </Link>
       </div>
     </main>
   );
