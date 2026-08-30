@@ -5,6 +5,7 @@ import Sidebar from "./Sidebar";
 import Toggle from "./Toggle";
 import Placeholder from "./Placeholder";
 import OpsHealthIframe from "./OpsHealthIframe";
+import BizOverview from "./BizOverview";
 import { PLACEHOLDERS } from "@/lib/placeholders";
 import {
   TAB_TITLES,
@@ -107,7 +108,9 @@ export default function ControlTower({ userEmail }: { userEmail: string }) {
           </span>
         </div>
 
-        {activeTab === "ops" ? (
+        {activeTab === "biz" ? (
+          <BizOverview scope={dataScope} />
+        ) : activeTab === "ops" ? (
           <div className={styles.section}>
             <div className={styles.sectionTitle}>
               <h2>GHN KAS — Báo Cáo Điều Hành Shopee</h2>

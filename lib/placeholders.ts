@@ -1,19 +1,9 @@
 import type { TabId } from "./tabs";
 
 export const PLACEHOLDERS: Record<
-  Exclude<TabId, "ops">,
+  Exclude<TabId, "ops" | "biz">,
   { description: string; planned: string[] }
 > = {
-  biz: {
-    description:
-      "Tổng quan sản lượng SPE Express & SPE Bulky: Create/GTTC theo tháng, so sánh FC và AOP, cơ cấu theo loại lane và block weight.",
-    planned: [
-      "Biểu đồ sản lượng theo tháng — mỗi tháng 2 cột Create và GTTC, chồng Express + Bulky",
-      "Metric MTD: Created, GTTC, % hoàn thành FC, MoM cùng ngày, % GTTC so AOP",
-      "Bảng tỷ trọng theo loại lane (Intra City / Intra Region / Cross Region / Cross Metro)",
-      "Riêng Bulky: sản lượng theo 3 nhóm vận hành (Ahamove / Vùng / GXT) và theo block weight",
-    ],
-  },
   khieunai: {
     description:
       "Theo dõi case khiếu nại & hỗ trợ theo tuần, case rate, phân loại case và top lý do phát sinh.",
