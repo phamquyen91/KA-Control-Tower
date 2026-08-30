@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { signIn, signOut } from "next-auth/react";
 import { NAV_BLOCKS, type DataScope, type TabId } from "@/lib/tabs";
 import styles from "./Sidebar.module.css";
 
@@ -115,7 +116,68 @@ export default function Sidebar({
         );
       })}
 
-      <div className={styles.meta}>Đăng nhập: {userEmail}</div>
+      <SessionBox fallbackEmail={userEmail} />
     </nav>
+  );
+}
+
+/**
+ * Hiện tài khoản đang đăng nhập và nút đăng xuất.
+ *
+ * Không có nút này thì không ai kiểm chứng được luồng đăng nhập: reload trang
+ * chỉ đọc lại cookie phiên, không chạm tới client secret của Google. Muốn biết
+ * secret còn khớp hay không thì phải đăng xuất rồi đăng nhập lại.
+ */
+function SessionBox({ fallbackEmail }: { fallbackEmail: string }) {
+  const [email, setEmail] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/auth/session")
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        setEmail(data?.user?.email ?? null);
+        setLoaded(true);
+      })
+      .catch(() => {
+        if (!cancelled) setLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!loaded) {
+    return <div className={styles.meta}>Đăng nhập: {fallbackEmail}</div>;
+  }
+
+  return (
+    <div className={styles.meta}>
+      {email ? (
+        <>
+          Đăng nhập: {email}
+          <button
+            type="button"
+            className={styles.sessionBtn}
+            onClick={() => signOut({ redirectTo: "/" })}
+          >
+            Đăng xuất
+          </button>
+        </>
+      ) : (
+        <>
+          Chưa đăng nhập
+          <button
+            type="button"
+            className={styles.sessionBtn}
+            onClick={() => signIn("google")}
+          >
+            Đăng nhập
+          </button>
+        </>
+      )}
+    </div>
   );
 }
