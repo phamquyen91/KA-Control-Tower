@@ -254,12 +254,18 @@ Từ 31/08/2026 app nguồn thêm Supabase Auth, giới hạn email `@ghn.vn`. C
 **tách biệt** với đăng nhập Control Tower — vào được Control Tower không có
 nghĩa là vào được báo cáo.
 
-Người dùng phải đăng nhập **ngay trong khung nhúng**. Đăng nhập ở tab khác
-thường không dùng lại được: trình duyệt tách riêng vùng lưu trữ của nội dung
-nhúng (storage partitioning), nên phiên ở tab ngoài không chảy vào iframe.
+**Và đăng nhập đó không thực hiện được bên trong khung nhúng.** Bấm nút đăng
+nhập Google trong iframe sẽ ra `This content is blocked` — Google cấm tuyệt đối
+trang đăng nhập của họ bị nhúng vào iframe để chống clickjacking. Đây là chính
+sách toàn cầu của Google, không sửa được từ phía Control Tower.
 
-Vì màn hình đăng nhập không bắt tay `iframe-resizer`, component sẽ hết thời gian
-chờ và nới khung lên `FALLBACK_HEIGHT` để form đăng nhập còn thao tác được.
+Hệ quả: tab này hiện panel giải thích kèm nút mở báo cáo ở tab riêng. Muốn nhúng
+thật sự chạy được thì cần team KAS làm một trong hai:
+
+1. **OAuth qua popup** — mở Google ở cửa sổ popup (tầng trên cùng) thay vì điều
+   hướng chính iframe, rồi trả session về. Đây là cách chuẩn cho OAuth trong iframe.
+2. **Đường dẫn nhúng riêng** không đòi đăng nhập tương tác, chỉ tin domain đã
+   khai trong `frame-ancestors` — vốn đã giới hạn sẵn ở `ka-control-tower.vercel.app`.
 
 ### Khi khung báo cáo hiện trang lỗi Google
 

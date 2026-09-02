@@ -48,7 +48,6 @@ export default function OpsHealthIframe({ scope }: OpsHealthIframeProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [embedState, setEmbedState] = useState<EmbedState>("loading");
-  const [hostOrigin, setHostOrigin] = useState("");
   // App nguồn tự điều hướng iframe sang docs.google.com khi không đọc được
   // Google Sheet nguồn, và trang lỗi của Google chiếm nguyên khung báo cáo.
   // Cross-origin nên không đọc được location; đếm số lần `load` thay thế:
@@ -126,9 +125,6 @@ export default function OpsHealthIframe({ scope }: OpsHealthIframeProps) {
     );
 
     const timer = window.setTimeout(() => {
-      // Domain thật của Control Tower — hiển thị trong thông báo lỗi để gửi
-      // cho team KAS khai báo frame-ancestors.
-      setHostOrigin(window.location.origin);
       setEmbedState((prev) => {
         if (prev === "connected") return prev;
         // Chưa bắt tay được thì chiều cao chưa bao giờ được set — nới ra cho
@@ -179,25 +175,21 @@ export default function OpsHealthIframe({ scope }: OpsHealthIframeProps) {
       {embedState === "unreachable" && (
         <div className={styles.notice} role="alert">
           <div className={styles.noticeTitle}>
-            Báo cáo cần đăng nhập riêng
+            Báo cáo phải mở ở tab riêng
           </div>
           <p className={styles.noticeBody}>
             App báo cáo KAS có cổng đăng nhập riêng (Supabase Auth, giới hạn
-            email <b>@ghn.vn</b>), tách biệt với đăng nhập Control Tower. Khung
-            bên dưới đang hiển thị màn hình đăng nhập của app đó — đăng nhập
-            ngay trong khung là báo cáo hiện ra.
+            email <b>@ghn.vn</b>), tách biệt với đăng nhập Control Tower. Mà
+            đăng nhập đó <b>không thực hiện được bên trong khung nhúng</b>:
+            Google cấm trang đăng nhập của họ bị nhúng vào iframe để chống
+            clickjacking, nên bấm nút đăng nhập trong khung sẽ ra thông báo
+            &ldquo;This content is blocked&rdquo;.
           </p>
           <p className={styles.noticeBody}>
-            Đăng nhập ở tab khác thường <b>không</b> dùng lại được ở đây: trình
-            duyệt tách riêng vùng lưu trữ của nội dung nhúng, nên phiên đăng
-            nhập ở tab ngoài không chảy vào khung này.
+            Đây là chính sách của Google, không phải cấu hình sai phía nào. Cho
+            tới khi team KAS bổ sung cách đăng nhập phù hợp với nhúng, dùng nút
+            bên dưới để mở báo cáo ở tab riêng.
           </p>
-          {hostOrigin && (
-            <p className={styles.noticeBody}>
-              Nếu khung trống hẳn, mở DevTools → Console xem có bị chặn không.
-              Domain cần team KAS whitelist: <code>{hostOrigin}</code>
-            </p>
-          )}
           <a
             className={styles.noticeLink}
             href={src}
