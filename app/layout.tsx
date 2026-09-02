@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import type { Metadata } from "next";
 import { Be_Vietnam_Pro } from "next/font/google";
 import "./globals.css";
@@ -22,7 +23,21 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false, nocache: true },
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Buộc mọi trang render động.
+  //
+  // CSP trong proxy.ts dùng nonce sinh mới theo từng request, kèm
+  // 'strict-dynamic' — mà 'strict-dynamic' vô hiệu hoá 'self', nên chỉ script
+  // mang đúng nonce mới chạy. Trang prerender tĩnh thì HTML đã cố định từ lúc
+  // build, không thể mang nonce của request, nên toàn bộ script bị chặn và
+  // React không hydrate. Triệu chứng: trang hiện ra nhưng chết cứng, không gọi
+  // được API nào.
+  //
+  // Next 16 đã bỏ `export const dynamic` khỏi route segment config, nên đọc
+  // một API động là cách còn lại để opt-in. App vốn nằm sau đăng nhập nên
+  // prerender tĩnh cũng không mang lại lợi ích gì.
+  await headers();
+
   return (
     <html lang="vi" className={sans.variable}>
       <body>{children}</body>

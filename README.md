@@ -145,6 +145,25 @@ Ba dòng trong CSP dễ bị sửa hỏng, đừng đụng nếu chưa hiểu:
 Sửa CSP xong phải mở DevTools kiểm tra Console: vi phạm CSP không làm build fail,
 nó chỉ âm thầm chặn ở trình duyệt.
 
+### Vì sao root layout gọi `headers()`
+
+`'strict-dynamic'` **vô hiệu hoá `'self'`** — chỉ script mang đúng nonce mới chạy.
+Trang prerender tĩnh có HTML cố định từ lúc build nên không mang được nonce của
+request, toàn bộ script bị chặn, React không hydrate. Triệu chứng rất dễ chẩn
+đoán nhầm: trang vẫn hiện ra nhưng chết cứng, không gọi được API nào, mà build
+thì vẫn xanh.
+
+`app/layout.tsx` đọc `headers()` để buộc mọi route render động. Next 16 đã bỏ
+`export const dynamic` khỏi route segment config nên đọc API động là cách còn
+lại. App vốn nằm sau đăng nhập nên prerender tĩnh cũng không lợi gì.
+
+Kiểm chứng sau khi đụng vào CSP hoặc cách render — nonce ở header phải khớp
+nonce trong HTML, và build phải cho ra `ƒ` chứ không phải `○`:
+
+```bash
+npm run build 2>&1 | grep -E "^[┌├└]"
+```
+
 ## Mục tiêu: FC và AOP
 
 Hai loại mục tiêu khác nhau về ý nghĩa, đừng dùng lẫn:
