@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { signIn, signOut } from "next-auth/react";
-import { NAV_BLOCKS, type DataScope, type TabId } from "@/lib/tabs";
+import { NAV_BLOCKS, type TabId } from "@/lib/tabs";
+import NavIcon from "./NavIcon";
 import styles from "./Sidebar.module.css";
 
 interface SidebarProps {
   activeTab: TabId;
   onSelectTab: (tab: TabId) => void;
-  scope: DataScope;
   userEmail: string;
   /** Mở drawer trên mobile (<=900px). Trên desktop sidebar luôn hiện. */
   isDrawerOpen: boolean;
@@ -20,7 +20,6 @@ interface SidebarProps {
 export default function Sidebar({
   activeTab,
   onSelectTab,
-  scope,
   userEmail,
   isDrawerOpen,
   isCollapsed,
@@ -53,7 +52,7 @@ export default function Sidebar({
         <div className={styles.logo}>GHN</div>
         <div>
           <div className={styles.brandName}>Control Tower</div>
-          <div className={styles.brandSub}>Shopee Account — {scope}</div>
+          <div className={styles.brandSub}>Shopee Account</div>
         </div>
       </div>
 
@@ -87,7 +86,7 @@ export default function Sidebar({
               aria-expanded={block.children ? isOpen : undefined}
               title={block.label}
             >
-              <span className={styles.dot} />
+              <NavIcon name={block.icon} />
               <span>{block.label}</span>
               {block.children && <span className={styles.chev}>›</span>}
             </button>
@@ -106,7 +105,7 @@ export default function Sidebar({
                       .join(" ")}
                     onClick={() => onSelectTab(child.tab)}
                   >
-                    <span className={styles.dot} />
+                    <NavIcon name={child.icon} />
                     {child.label}
                   </button>
                 ))}

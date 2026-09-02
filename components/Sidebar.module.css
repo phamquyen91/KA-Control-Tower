@@ -81,12 +81,21 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
-.dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.6);
+.icon {
+  width: 17px;
+  height: 17px;
   flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.subitem .icon {
+  width: 15px;
+  height: 15px;
+  opacity: 0.8;
+}
+
+.activeBlock > .head .icon {
+  opacity: 1;
 }
 
 .chev {
@@ -103,10 +112,6 @@
 .activeBlock > .head {
   background: #fff;
   color: var(--orange-dark);
-}
-
-.activeBlock > .head .dot {
-  background: var(--orange);
 }
 
 .activeBlock > .head .chev {
@@ -144,20 +149,10 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
-.subitem .dot {
-  width: 5px;
-  height: 5px;
-  background: rgba(255, 255, 255, 0.55);
-}
-
 .subActive {
   background: rgba(255, 255, 255, 0.18);
   color: #fff;
   font-weight: 700;
-}
-
-.subActive .dot {
-  background: #fff;
 }
 
 .meta {
@@ -240,7 +235,7 @@
   /* Ở trạng thái thu gọn chỉ còn chấm tròn của từng mục. */
   .collapsed .brand > div:last-child,
   .collapsed .groupLabel,
-  .collapsed .head > span:not(.dot),
+  .collapsed .head > span,
   .collapsed .chev,
   .collapsed .children,
   .collapsed .meta {
@@ -257,9 +252,11 @@
     padding: 12px 0;
   }
 
-  .collapsed .dot {
-    width: 9px;
-    height: 9px;
+  /* Thu gọn thì icon chính là thứ duy nhất còn lại, nên phóng to cho dễ nhắm. */
+  .collapsed .icon {
+    width: 21px;
+    height: 21px;
+    opacity: 1;
   }
 }
 

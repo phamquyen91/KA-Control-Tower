@@ -35,7 +35,6 @@ export default function ControlTower({ userEmail }: { userEmail: string }) {
       <Sidebar
         activeTab={activeTab}
         onSelectTab={handleSelectTab}
-        scope={dataScope}
         userEmail={userEmail}
         isDrawerOpen={isDrawerOpen}
         isCollapsed={isNavCollapsed}

@@ -658,15 +658,24 @@ function BandShareTable({
             <th scope="col" rowSpan={2}>
               Tháng
             </th>
-            {WEIGHT_ORDER.map((band) => (
-              <th key={band} scope="col" colSpan={2}>
+            {WEIGHT_ORDER.map((band, bi) => (
+              <th
+                key={band}
+                scope="col"
+                colSpan={2}
+                className={bi > 0 ? styles.groupDivider : undefined}
+              >
                 {bandLabel(band, scope)}
               </th>
             ))}
           </tr>
           <tr>
-            {WEIGHT_ORDER.map((band) => [
-              <th key={`${band}-v`} scope="col">
+            {WEIGHT_ORDER.map((band, bi) => [
+              <th
+                key={`${band}-v`}
+                scope="col"
+                className={bi > 0 ? styles.groupDivider : undefined}
+              >
                 Sản lượng
               </th>,
               <th key={`${band}-s`} scope="col">
@@ -679,8 +688,13 @@ function BandShareTable({
           {rows.map((row) => (
             <tr key={row.month}>
               <th scope="row">{formatMonthShort(row.month)}</th>
-              {row.cells.map((cell) => [
-                <td key={`${cell.band}-v`}>{formatNumber(cell.created)}</td>,
+              {row.cells.map((cell, ci) => [
+                <td
+                  key={`${cell.band}-v`}
+                  className={ci > 0 ? styles.groupDivider : undefined}
+                >
+                  {formatNumber(cell.created)}
+                </td>,
                 <td key={`${cell.band}-s`}>{formatPercent(cell.share)}</td>,
               ])}
             </tr>
@@ -700,15 +714,24 @@ function TeamShareTable({ rows }: { rows: ScopePayload["teamShare"] }) {
             <th scope="col" rowSpan={2}>
               Tháng
             </th>
-            {TEAM_ORDER.map((team) => (
-              <th key={team} scope="col" colSpan={2}>
+            {TEAM_ORDER.map((team, ti) => (
+              <th
+                key={team}
+                scope="col"
+                colSpan={2}
+                className={ti > 0 ? styles.groupDivider : undefined}
+              >
                 {team}
               </th>
             ))}
           </tr>
           <tr>
-            {TEAM_ORDER.map((team) => [
-              <th key={`${team}-v`} scope="col">
+            {TEAM_ORDER.map((team, ti) => [
+              <th
+                key={`${team}-v`}
+                scope="col"
+                className={ti > 0 ? styles.groupDivider : undefined}
+              >
                 Sản lượng
               </th>,
               <th key={`${team}-s`} scope="col">
@@ -721,8 +744,13 @@ function TeamShareTable({ rows }: { rows: ScopePayload["teamShare"] }) {
           {rows.map((row) => (
             <tr key={row.month}>
               <th scope="row">{formatMonthShort(row.month)}</th>
-              {row.cells.map((cell) => [
-                <td key={`${cell.team}-v`}>{formatNumber(cell.created)}</td>,
+              {row.cells.map((cell, ci) => [
+                <td
+                  key={`${cell.team}-v`}
+                  className={ci > 0 ? styles.groupDivider : undefined}
+                >
+                  {formatNumber(cell.created)}
+                </td>,
                 <td key={`${cell.team}-s`}>{formatPercent(cell.share)}</td>,
               ])}
             </tr>
