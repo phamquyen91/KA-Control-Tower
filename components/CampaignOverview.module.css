@@ -518,11 +518,11 @@
 }
 
 .swD0 {
-  background: var(--blue);
+  background: var(--orange);
 }
 
 .swD1 {
-  background: var(--orange);
+  background: var(--blue);
 }
 
 .lnD0,
@@ -531,12 +531,12 @@
   width: 16px;
   height: 0;
   display: inline-block;
-  border-top: 2px solid var(--blue);
+  border-top: 2px solid var(--orange);
 }
 
 .lnD1 {
   border-top-style: dashed;
-  border-top-color: var(--orange);
+  border-top-color: var(--blue);
 }
 
 .lnBase {

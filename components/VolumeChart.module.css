@@ -208,15 +208,16 @@
   color: var(--text-3);
 }
 
-/* Bộ màu cho chart ODR: D0 nét liền đậm, D+1 nét đứt, ngày thường xám. */
+/* Bộ màu theo NGÀY, không theo màu: D là ngày chính nên lấy cam thương hiệu,
+   D+1 là ngày phụ nên lấy xanh. Đổi màu thì sửa ở đây, chỗ dùng giữ nguyên. */
 .lineD0 {
-  stroke: var(--blue);
-  color: var(--blue);
+  stroke: var(--orange);
+  color: var(--orange);
 }
 
 .lineD1 {
-  stroke: var(--orange);
-  color: var(--orange);
+  stroke: var(--blue);
+  color: var(--blue);
 }
 
 .lineBase {

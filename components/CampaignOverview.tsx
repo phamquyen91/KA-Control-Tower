@@ -196,13 +196,13 @@ function VolumeCard({
       key: "d0",
       label: "Ngày D",
       value: r.cpD0.orders,
-      className: chart.barPrimary,
+      className: chart.barSecondary,
     },
     {
       key: "d1",
       label: "Ngày D+1",
       value: r.cpD1.orders,
-      className: chart.barSecondary,
+      className: chart.barPrimary,
     },
   ]);
 
