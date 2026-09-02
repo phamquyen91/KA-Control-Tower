@@ -19,6 +19,11 @@ const HANDSHAKE_TIMEOUT_MS = 6000;
 // mức này. Chống hẳn trường hợp báo cáo bị collapse thành khung trắng.
 const MIN_EMBED_HEIGHT = 600;
 
+// Khi child không bắt tay, nhiều khả năng bên trong đang là màn hình đăng nhập
+// của chính app KAS. Lúc đó phải cho khung cao hẳn lên, nếu không người dùng
+// không thao tác được với form nằm bên trong.
+const FALLBACK_HEIGHT = 900;
+
 // Format message child của iframe-resizer 4.x gửi lên parent:
 //   [iFrameSizer]<iframeId>:<height>:<width>:<type>
 const IFRAME_SIZER_MESSAGE = /^\[iFrameSizer\][^:]+:([\d.]+):[\d.]+:/;
@@ -124,7 +129,13 @@ export default function OpsHealthIframe({ scope }: OpsHealthIframeProps) {
       // Domain thật của Control Tower — hiển thị trong thông báo lỗi để gửi
       // cho team KAS khai báo frame-ancestors.
       setHostOrigin(window.location.origin);
-      setEmbedState((prev) => (prev === "connected" ? prev : "unreachable"));
+      setEmbedState((prev) => {
+        if (prev === "connected") return prev;
+        // Chưa bắt tay được thì chiều cao chưa bao giờ được set — nới ra cho
+        // đủ chỗ dùng thứ đang hiển thị bên trong.
+        el.style.height = `${FALLBACK_HEIGHT}px`;
+        return "unreachable";
+      });
     }, HANDSHAKE_TIMEOUT_MS);
 
     return () => {
@@ -168,17 +179,23 @@ export default function OpsHealthIframe({ scope }: OpsHealthIframeProps) {
       {embedState === "unreachable" && (
         <div className={styles.notice} role="alert">
           <div className={styles.noticeTitle}>
-            Chưa hiển thị được báo cáo nhúng
+            Báo cáo cần đăng nhập riêng
           </div>
           <p className={styles.noticeBody}>
-            Iframe từ <code>{KAS_ORIGIN}</code> không phản hồi. Nguyên nhân
-            thường gặp: CSP <code>frame-ancestors</code> phía app nguồn chưa cho
-            phép domain này nhúng. Mở DevTools → Console để xem thông báo chặn
-            cụ thể.
+            App báo cáo KAS có cổng đăng nhập riêng (Supabase Auth, giới hạn
+            email <b>@ghn.vn</b>), tách biệt với đăng nhập Control Tower. Khung
+            bên dưới đang hiển thị màn hình đăng nhập của app đó — đăng nhập
+            ngay trong khung là báo cáo hiện ra.
+          </p>
+          <p className={styles.noticeBody}>
+            Đăng nhập ở tab khác thường <b>không</b> dùng lại được ở đây: trình
+            duyệt tách riêng vùng lưu trữ của nội dung nhúng, nên phiên đăng
+            nhập ở tab ngoài không chảy vào khung này.
           </p>
           {hostOrigin && (
             <p className={styles.noticeBody}>
-              Domain cần gửi team KAS whitelist: <code>{hostOrigin}</code>
+              Nếu khung trống hẳn, mở DevTools → Console xem có bị chặn không.
+              Domain cần team KAS whitelist: <code>{hostOrigin}</code>
             </p>
           )}
           <a

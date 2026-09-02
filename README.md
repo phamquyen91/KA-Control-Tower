@@ -248,6 +248,19 @@ domain, set biến môi trường:
 NEXT_PUBLIC_KAS_ORIGIN=https://domain-moi.example.com
 ```
 
+### App KAS có cổng đăng nhập riêng
+
+Từ 31/08/2026 app nguồn thêm Supabase Auth, giới hạn email `@ghn.vn`. Cổng này
+**tách biệt** với đăng nhập Control Tower — vào được Control Tower không có
+nghĩa là vào được báo cáo.
+
+Người dùng phải đăng nhập **ngay trong khung nhúng**. Đăng nhập ở tab khác
+thường không dùng lại được: trình duyệt tách riêng vùng lưu trữ của nội dung
+nhúng (storage partitioning), nên phiên ở tab ngoài không chảy vào iframe.
+
+Vì màn hình đăng nhập không bắt tay `iframe-resizer`, component sẽ hết thời gian
+chờ và nới khung lên `FALLBACK_HEIGHT` để form đăng nhập còn thao tác được.
+
 ### Khi khung báo cáo hiện trang lỗi Google
 
 App nguồn lấy dữ liệu từ một Google Sheet:
