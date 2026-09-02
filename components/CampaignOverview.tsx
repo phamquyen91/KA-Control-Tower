@@ -14,6 +14,54 @@ import LineChart, { type ChartLine } from "./LineChart";
 import chart from "./VolumeChart.module.css";
 import styles from "./CampaignOverview.module.css";
 
+/**
+ * Ngưỡng đạt của cả ODR lẫn OPR. Dưới ngưỡng thì ô được tô đỏ, càng hụt sâu
+ * càng đậm.
+ */
+const RATE_TARGET = 0.9;
+
+/**
+ * Hụt bao nhiêu so ngưỡng, quy về thang 0–1.
+ *
+ * Chia cho 0.25 chứ không chia cho chính ngưỡng: ODR thực tế hiếm khi xuống
+ * dưới 65%, nếu chuẩn hoá theo ngưỡng thì mọi giá trị thực đều nằm ở nửa nhạt
+ * của thang và không phân biệt được nặng nhẹ.
+ */
+function severity(rate: number) {
+  return Math.min(1, Math.max(0, (RATE_TARGET - rate) / 0.25));
+}
+
+/** Ô tỷ lệ (ODR/OPR) có tô cảnh báo. `null` = chưa có dữ liệu, để trống. */
+function RateCell({
+  value,
+  className,
+}: {
+  value: number | null;
+  className?: string;
+}) {
+  if (value === null) {
+    return <td className={className}>—</td>;
+  }
+
+  const level = severity(value);
+  const style =
+    level > 0
+      ? {
+          // Nền đỏ nhạt dần theo mức hụt; chữ chuyển sang đỏ đậm khi hụt nhiều
+          // để vẫn đủ tương phản trên nền đã đậm.
+          backgroundColor: `rgba(244, 67, 54, ${(0.1 + level * 0.45).toFixed(3)})`,
+          color: level > 0.45 ? "#7f1d17" : "var(--text)",
+          fontWeight: 700,
+        }
+      : undefined;
+
+  return (
+    <td className={className} style={style}>
+      {formatPercent(value)}
+    </td>
+  );
+}
+
 type LoadState =
   | { status: "loading" }
   | { status: "error"; message: string }
@@ -318,6 +366,8 @@ function OdrCard({
       <LineChart
         ticks={payload.campaigns}
         lines={lines}
+        target={RATE_TARGET}
+        targetLabel={`ngưỡng đạt ${formatPercent(RATE_TARGET, 0)}`}
         ariaLabel={`ODR các kỳ campaign của ${SCOPE_LABEL[scope]}`}
       />
     </Card>
@@ -353,7 +403,7 @@ function PeriodCard({
                 <th scope="row">{r.campaign}</th>
                 <td>{formatNumber(r.cpD0.orders)}</td>
                 <td>{formatNumber(r.cpD1.orders)}</td>
-                <td>{formatPercent(r.cpD0.odr)}</td>
+                <RateCell value={r.cpD0.odr} />
                 <td className={r.deltaD0Pp >= 0 ? styles.up : styles.down}>
                   {formatPp(r.deltaD0Pp)}
                 </td>
@@ -463,15 +513,24 @@ function ProvinceCard({
                 <th scope="col" rowSpan={2}>
                   Tỉnh
                 </th>
-                {PROVINCE_TEAM_ORDER.map((team) => (
-                  <th key={team} scope="col" colSpan={2}>
+                {PROVINCE_TEAM_ORDER.map((team, ti) => (
+                  <th
+                    key={team}
+                    scope="col"
+                    colSpan={2}
+                    className={ti > 0 ? styles.groupDivider : undefined}
+                  >
                     {team}
                   </th>
                 ))}
               </tr>
               <tr>
-                {PROVINCE_TEAM_ORDER.map((team) => [
-                  <th key={`${team}-v`} scope="col">
+                {PROVINCE_TEAM_ORDER.map((team, ti) => [
+                  <th
+                    key={`${team}-v`}
+                    scope="col"
+                    className={ti > 0 ? styles.groupDivider : undefined}
+                  >
                     Sản lượng
                   </th>,
                   <th key={`${team}-r`} scope="col">
@@ -495,23 +554,29 @@ function ProvinceCard({
               <tr key={r.province}>
                 <th scope="row">{r.province}</th>
                 {splitByTeam
-                  ? PROVINCE_TEAM_ORDER.map((team) => [
-                      <td key={`${team}-v`}>
+                  ? PROVINCE_TEAM_ORDER.map((team, ti) => [
+                      <td
+                        key={`${team}-v`}
+                        className={ti > 0 ? styles.groupDivider : undefined}
+                      >
                         {formatNumber(r.byTeam[team].orders)}
                       </td>,
-                      <td key={`${team}-r`}>
-                        {/* OPR chưa có trong nguồn nên để trống, không lấy ODR
-                            dùng thay. Tỉnh đội đó không chạy cũng để trống chứ
-                            không hiện 0,0% — dễ đọc nhầm thành giao trễ hết. */}
-                        {isPickup || r.byTeam[team].orders === 0
-                          ? "—"
-                          : formatPercent(r.byTeam[team].odr)}
-                      </td>,
+                      // OPR chưa có trong nguồn nên để trống, không lấy ODR
+                      // dùng thay. Tỉnh đội đó không chạy cũng để trống chứ
+                      // không hiện 0,0% — dễ đọc nhầm thành giao trễ hết.
+                      <RateCell
+                        key={`${team}-r`}
+                        value={
+                          isPickup || r.byTeam[team].orders === 0
+                            ? null
+                            : r.byTeam[team].odr
+                        }
+                      />,
                     ])
                   : [
                       <td key="v">{formatNumber(r.orders)}</td>,
                       !isPickup ? (
-                        <td key="r">{formatPercent(r.odr)}</td>
+                        <RateCell key="r" value={r.odr} />
                       ) : null,
                     ]}
               </tr>

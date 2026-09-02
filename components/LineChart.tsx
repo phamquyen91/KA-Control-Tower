@@ -19,6 +19,9 @@ export interface LineChartProps {
   ariaLabel: string;
   /** Chặn dưới của trục. ODR nằm trong dải hẹp nên cắt từ 0.6 mới thấy chênh lệch. */
   floor?: number;
+  /** Vạch ngưỡng đạt; bỏ trống thì không vẽ. */
+  target?: number;
+  targetLabel?: string;
 }
 
 const WIDTH = 720;
@@ -32,6 +35,8 @@ export default function LineChart({
   lines,
   ariaLabel,
   floor = 0.6,
+  target,
+  targetLabel,
 }: LineChartProps) {
   const [active, setActive] = useState<number | null>(null);
 
@@ -71,6 +76,26 @@ export default function LineChart({
               </text>
             </g>
           ))}
+
+          {target !== undefined && (
+            <g>
+              <line
+                x1={PAD.left}
+                x2={WIDTH - PAD.right}
+                y1={y(target)}
+                y2={y(target)}
+                className={styles.target}
+              />
+              <text
+                x={WIDTH - PAD.right}
+                y={y(target) - 6}
+                textAnchor="end"
+                className={styles.targetLabel}
+              >
+                {targetLabel}
+              </text>
+            </g>
+          )}
 
           {active !== null && (
             <rect

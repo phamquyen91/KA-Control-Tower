@@ -375,7 +375,11 @@
   line-height: 1.3;
 }
 
-.table th:first-child,
+/* Chỉ ô đầu của HÀNG HEADER ĐẦU TIÊN và cột đầu của thân bảng mới là "cột
+   tên". Nếu để `th:first-child` trần thì ô đầu của hàng header thứ hai (ví dụ
+   "Sản lượng" của nhóm GHN) cũng bị tô đậm và căn trái, trông như một cột
+   khác loại so với các cột cùng hàng. */
+.table thead tr:first-child th:first-child,
 .table tbody th {
   text-align: left;
   font-weight: 700;
@@ -505,4 +509,10 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Vạch ngăn giữa hai nhóm cột (ví dụ GHN | AHM) — đậm hơn đường kẻ hàng để
+   mắt tách được hai nhóm ngay, không phải dò theo tiêu đề. */
+.groupDivider {
+  border-left: 2px solid var(--text-3);
 }
