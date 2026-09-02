@@ -75,9 +75,10 @@ export default function ControlTower({ userEmail }: { userEmail: string }) {
             </div>
           </div>
           <div className={styles.toggles}>
-            {/* Tab kinh doanh hiển thị đồng thời cả hai scope nên toggle này
-                không có gì để lọc — ẩn đi thay vì để một nút bấm vô tác dụng. */}
-            {activeTab !== "biz" && (
+            {/* Tab kinh doanh và tab campaign đều hiển thị đồng thời cả hai
+                scope nên toggle này không có gì để lọc — ẩn đi thay vì để một
+                nút bấm vô tác dụng. */}
+            {activeTab !== "biz" && activeTab !== "campaign" && (
               <Toggle
                 ariaLabel="Chọn nhóm dịch vụ"
                 variant="blue"
@@ -95,7 +96,7 @@ export default function ControlTower({ userEmail }: { userEmail: string }) {
         {activeTab === "biz" ? (
           <BizOverview />
         ) : activeTab === "campaign" ? (
-          <CampaignOverview scope={dataScope} />
+          <CampaignOverview />
         ) : activeTab === "ops" ? (
           <div className={styles.section}>
             <div className={styles.sectionTitle}>

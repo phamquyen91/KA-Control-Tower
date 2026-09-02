@@ -3,8 +3,10 @@ import "server-only";
 import {
   CAMPAIGNS,
   CAMPAIGN_PROVINCES,
+  CAMPAIGN_TEAMS,
   CAMPAIGN_TOTALS,
   type DayOffset,
+  type DeliveryTeam,
   type Direction,
 } from "./campaignData";
 import type { DataScope } from "./tabs";
@@ -46,8 +48,8 @@ export interface CampaignRow {
   baselineD0: OdrCell;
   /** Chênh lệch ODR theo điểm phần trăm: CP D0 − baseline D0. */
   deltaD0Pp: number;
-  /** Tổng đơn trong mẫu của campaign (D0 + D+1). */
-  cpOrders: number;
+  /** Sản lượng ngày D gấp bao nhiêu lần ngày thường; null khi không có baseline. */
+  liftVsBaseline: number | null;
 }
 
 export function campaignRows(scope: DataScope): CampaignRow[] {
@@ -61,7 +63,8 @@ export function campaignRows(scope: DataScope): CampaignRow[] {
       cpD1,
       baselineD0,
       deltaD0Pp: (cpD0.odr - baselineD0.odr) * 100,
-      cpOrders: cpD0.orders + cpD1.orders,
+      liftVsBaseline:
+        baselineD0.orders === 0 ? null : cpD0.orders / baselineD0.orders,
     };
   });
 }
@@ -70,31 +73,61 @@ export function latestCampaign(): string {
   return CAMPAIGNS[CAMPAIGNS.length - 1];
 }
 
+export interface TeamRow {
+  campaign: string;
+  cells: { team: DeliveryTeam; orders: number; share: number }[];
+}
+
+const TEAM_ORDER: DeliveryTeam[] = ["AHM", "GHN"];
+
+/** Sản lượng ngày D theo đội giao, kèm tỷ trọng trong từng kỳ campaign. */
+export function teamRows(scope: DataScope): TeamRow[] {
+  return CAMPAIGNS.map((campaign) => {
+    const rows = CAMPAIGN_TEAMS.filter(
+      (r) =>
+        r.scope === scope &&
+        r.campaign === campaign &&
+        r.type === "CP" &&
+        r.day === "D0",
+    );
+    const total = rows.reduce((acc, r) => acc + r.orders, 0);
+    return {
+      campaign,
+      cells: TEAM_ORDER.map((team) => {
+        const orders = rows
+          .filter((r) => r.team === team)
+          .reduce((acc, r) => acc + r.orders, 0);
+        return { team, orders, share: total === 0 ? 0 : orders / total };
+      }),
+    };
+  });
+}
+
 export interface ProvinceRow extends OdrCell {
   province: string;
 }
 
 /**
- * Xếp hạng tỉnh theo ODR trong một campaign.
- * `minOrders` để loại các tỉnh mẫu quá nhỏ — vài đơn là ODR nhảy về 0% hoặc
- * 100%, lọt vào bảng xếp hạng thì gây hiểu nhầm.
+ * Top tỉnh theo SẢN LƯỢNG (không phải theo ODR).
+ *
+ * Xếp theo sản lượng thì không cần ngưỡng mẫu tối thiểu: tỉnh vài đơn tự khắc
+ * rơi xuống cuối, không thể lọt top nhờ ODR 100% may mắn.
  */
-export function provinceRanking(
+export function topProvincesByVolume(
   scope: DataScope,
   campaign: string,
   direction: Direction,
-  day: DayOffset,
-  minOrders: number,
+  limit: number,
 ): ProvinceRow[] {
   return CAMPAIGN_PROVINCES.filter(
     (r) =>
       r.scope === scope &&
       r.campaign === campaign &&
       r.type === "CP" &&
-      r.day === day &&
-      r.direction === direction &&
-      r.orders >= minOrders,
+      r.day === "D0" &&
+      r.direction === direction,
   )
     .map((r) => ({ province: r.province, ...cell(r.orders, r.ontime) }))
-    .sort((a, b) => b.odr - a.odr);
+    .sort((a, b) => b.orders - a.orders)
+    .slice(0, limit);
 }

@@ -1,35 +1,32 @@
 import "server-only";
 
-import { CAMPAIGNS, CAMPAIGN_SNAPSHOT_AT, type Direction } from "./campaignData";
+import {
+  CAMPAIGNS,
+  CAMPAIGN_SNAPSHOT_AT,
+  TOTAL_PROVINCES,
+  type Direction,
+} from "./campaignData";
 import { BIZ_SOURCE_URL } from "./labels";
 import {
   campaignRows,
   latestCampaign,
-  provinceRanking,
+  teamRows,
+  topProvincesByVolume,
   type CampaignRow,
   type ProvinceRow,
+  type TeamRow,
 } from "./campaignMetrics";
 import type { DataScope } from "./tabs";
 
-/**
- * Ngưỡng mẫu tối thiểu cho bảng xếp hạng tỉnh. Dưới mức này ODR nhảy về 0%
- * hoặc 100% chỉ vì vài đơn, lọt vào top thì gây hiểu nhầm.
- */
-export const MIN_SAMPLE = 300;
-
-const DIRECTIONS: Direction[] = ["to", "from"];
-
-export interface RankingPayload {
-  /** Số tỉnh đạt ngưỡng mẫu, để giao diện nói rõ đang xếp hạng trên bao nhiêu. */
-  qualified: number;
-  top: ProvinceRow[];
-  bottom: ProvinceRow[];
-}
+/** Số tỉnh hiển thị trong hai bảng top. */
+export const TOP_PROVINCE_LIMIT = 10;
 
 export interface CampaignScopePayload {
   rows: CampaignRow[];
-  /** rankings[kỳ campaign][chiều tỉnh] */
-  rankings: Record<string, Record<Direction, RankingPayload>>;
+  /** Chỉ Bulky mới dùng; Standard gần như toàn bộ do GHN giao. */
+  teams: TeamRow[];
+  /** topProvinces[kỳ campaign][chiều] */
+  topProvinces: Record<string, Record<Direction, ProvinceRow[]>>;
 }
 
 export interface CampaignPayload {
@@ -37,37 +34,22 @@ export interface CampaignPayload {
   latestCampaign: string;
   snapshotAt: string;
   sourceUrl: string;
-  minSample: number;
+  topLimit: number;
   totalProvinces: number;
   scopes: Record<DataScope, CampaignScopePayload>;
 }
 
-/**
- * Chỉ gửi ra đúng phần giao diện vẽ: 5 tỉnh đầu và 5 tỉnh cuối mỗi bảng, kèm
- * số tỉnh đạt ngưỡng. Ma trận tỉnh-đi × tỉnh-đến ở lại trên server.
- */
 function buildScope(scope: DataScope): CampaignScopePayload {
-  const rankings: Record<string, Record<Direction, RankingPayload>> = {};
+  const topProvinces: Record<string, Record<Direction, ProvinceRow[]>> = {};
 
   for (const campaign of CAMPAIGNS) {
-    rankings[campaign] = {} as Record<Direction, RankingPayload>;
-    for (const direction of DIRECTIONS) {
-      const ranked = provinceRanking(
-        scope,
-        campaign,
-        direction,
-        "D0",
-        MIN_SAMPLE,
-      );
-      rankings[campaign][direction] = {
-        qualified: ranked.length,
-        top: ranked.slice(0, 5),
-        bottom: ranked.slice(-5).reverse(),
-      };
-    }
+    topProvinces[campaign] = {
+      from: topProvincesByVolume(scope, campaign, "from", TOP_PROVINCE_LIMIT),
+      to: topProvincesByVolume(scope, campaign, "to", TOP_PROVINCE_LIMIT),
+    };
   }
 
-  return { rows: campaignRows(scope), rankings };
+  return { rows: campaignRows(scope), teams: teamRows(scope), topProvinces };
 }
 
 export function buildCampaignPayload(): CampaignPayload {
@@ -76,9 +58,8 @@ export function buildCampaignPayload(): CampaignPayload {
     latestCampaign: latestCampaign(),
     snapshotAt: CAMPAIGN_SNAPSHOT_AT,
     sourceUrl: BIZ_SOURCE_URL,
-    minSample: MIN_SAMPLE,
-    // Cố định 35 tỉnh trong dữ liệu nguồn; dùng cho dòng "x/35 tỉnh đủ điều kiện".
-    totalProvinces: 35,
+    topLimit: TOP_PROVINCE_LIMIT,
+    totalProvinces: TOTAL_PROVINCES,
     scopes: { SPB: buildScope("SPB"), SPE: buildScope("SPE") },
   };
 }

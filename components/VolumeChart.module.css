@@ -200,3 +200,26 @@
 .tipDash[data-dashed] {
   border-top-style: dashed;
 }
+
+.axisNote {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-3);
+}
+
+/* Bộ màu cho chart ODR: D0 nét liền đậm, D+1 nét đứt, ngày thường xám. */
+.lineD0 {
+  stroke: var(--blue);
+  color: var(--blue);
+}
+
+.lineD1 {
+  stroke: var(--orange);
+  color: var(--orange);
+}
+
+.lineBase {
+  stroke: var(--text-3);
+  color: var(--text-3);
+}

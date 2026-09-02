@@ -3,7 +3,6 @@
 import { useState } from "react";
 import {
   formatCompact,
-  formatMonth,
   formatMonthShort,
   formatNumber,
   formatPercent,
@@ -29,10 +28,16 @@ export interface LineSeries {
 
 export interface VolumeChartProps {
   months: string[];
-  /** Mỗi tháng một mảng segment; nhiều segment thì cột xếp chồng. */
+  /** Mỗi mốc một mảng segment. Mặc định xếp chồng; `grouped` thì đứng cạnh nhau. */
   bars: BarSegment[][];
   lines: LineSeries[];
   ariaLabel: string;
+  /** true = cột đứng cạnh nhau, dùng khi so hai đại lượng độc lập (D0 và D+1). */
+  grouped?: boolean;
+  /** Nhãn cho vạch tham chiếu ở trục phải. */
+  rightAxisLabel?: string;
+  /** Nhãn trục X; mặc định coi mốc là tháng và rút gọn thành T1, T2... */
+  formatTick?: (value: string) => string;
 }
 
 const WIDTH = 720;
@@ -53,28 +58,40 @@ export default function VolumeChart({
   bars,
   lines,
   ariaLabel,
+  grouped = false,
+  rightAxisLabel = "đạt 100%",
+  formatTick = formatMonthShort,
 }: VolumeChartProps) {
   // Tháng đang được trỏ/chạm/focus. null = không hiện tooltip.
   const [active, setActive] = useState<number | null>(null);
 
   const stackTotals = bars.map((segs) => segs.reduce((a, s) => a + s.value, 0));
-  const topLeft = niceCeil(Math.max(...stackTotals, 0));
+  // Cột nhóm thì mỗi cột đứng riêng nên trần lấy giá trị lớn nhất, không lấy tổng.
+  const peak = grouped
+    ? Math.max(...bars.flatMap((segs) => segs.map((seg) => seg.value)), 0)
+    : Math.max(...stackTotals, 0);
+  const topLeft = niceCeil(peak);
 
   // Trục phải cho % hoàn thành. Cố định 0–150% để các chart so được với nhau
   // và mốc 100% luôn nằm cùng một chỗ.
   const topRight = 1.5;
 
   const groupW = PLOT_W / months.length;
-  const barW = Math.min(34, groupW - 18);
+  const maxSegs = Math.max(1, ...bars.map((b) => b.length));
+  const barW = grouped
+    ? Math.min(30, (groupW - 22) / maxSegs)
+    : Math.min(34, groupW - 18);
 
   const yLeft = (v: number) => PAD.top + PLOT_H - (v / topLeft) * PLOT_H;
   const yRight = (v: number) => PAD.top + PLOT_H - (v / topRight) * PLOT_H;
   const xCenter = (i: number) => PAD.left + i * groupW + groupW / 2;
 
   const leftTicks = [0, 0.25, 0.5, 0.75, 1].map((t) => t * topLeft);
-  const rightTicks = [0, 0.5, 1, 1.5];
+  // Không có đường nào thì trục phải và vạch tham chiếu chỉ là nhiễu.
+  const hasLines = lines.length > 0;
+  const rightTicks = hasLines ? [0, 0.5, 1, 1.5] : [];
 
-  const stacked = bars.some((segs) => segs.length > 1);
+  const stacked = !grouped && bars.some((segs) => segs.length > 1);
 
   return (
     <div className={styles.scroll}>
@@ -119,20 +136,24 @@ export default function VolumeChart({
           ))}
 
           {/* Mốc 100% — vạch tham chiếu cho các đường hoàn thành. */}
-          <line
-            x1={PAD.left}
-            x2={WIDTH - PAD.right}
-            y1={yRight(1)}
-            y2={yRight(1)}
-            className={styles.target}
-          />
-          <text
-            x={WIDTH - PAD.right + 8}
-            y={yRight(1) - 6}
-            className={styles.targetLabel}
-          >
-            đạt 100%
-          </text>
+          {hasLines && (
+            <>
+              <line
+                x1={PAD.left}
+                x2={WIDTH - PAD.right}
+                y1={yRight(1)}
+                y2={yRight(1)}
+                className={styles.target}
+              />
+              <text
+                x={WIDTH - PAD.right + 8}
+                y={yRight(1) - 6}
+                className={styles.targetLabel}
+              >
+                {rightAxisLabel}
+              </text>
+            </>
+          )}
 
           {active !== null && (
             <rect
@@ -146,16 +167,23 @@ export default function VolumeChart({
 
           {bars.map((segs, i) => {
             let cursor = 0;
+            const groupStart =
+              xCenter(i) - (barW * segs.length + 4 * (segs.length - 1)) / 2;
             return (
               <g key={months[i]}>
-                {segs.map((seg) => {
-                  const y0 = yLeft(cursor);
-                  cursor += seg.value;
-                  const y1 = yLeft(cursor);
+                {segs.map((seg, si) => {
+                  // Chồng: mỗi segment nối tiếp segment trước.
+                  // Nhóm: mỗi segment là một cột riêng, đều bắt đầu từ đáy.
+                  const x = grouped
+                    ? groupStart + si * (barW + 4)
+                    : xCenter(i) - barW / 2;
+                  const y0 = grouped ? yLeft(0) : yLeft(cursor);
+                  if (!grouped) cursor += seg.value;
+                  const y1 = grouped ? yLeft(seg.value) : yLeft(cursor);
                   return (
                     <rect
                       key={seg.key}
-                      x={xCenter(i) - barW / 2}
+                      x={x}
                       y={y1}
                       width={barW}
                       height={Math.max(0, y0 - y1)}
@@ -171,7 +199,7 @@ export default function VolumeChart({
                     active === i ? styles.axisLabelActive : styles.axisLabel
                   }
                 >
-                  {formatMonthShort(months[i])}
+                  {formatTick(months[i])}
                 </text>
               </g>
             );
@@ -238,7 +266,7 @@ export default function VolumeChart({
               className={styles.hit}
               tabIndex={0}
               role="button"
-              aria-label={`Xem số liệu ${formatMonth(month)}`}
+              aria-label={`Xem số liệu ${formatTick(month)}`}
               onPointerEnter={() => setActive(i)}
               onPointerDown={() => setActive(i)}
               onFocus={() => setActive(i)}
@@ -255,7 +283,7 @@ export default function VolumeChart({
             }}
             role="status"
           >
-            <div className={styles.tipTitle}>{formatMonth(months[active])}</div>
+            <div className={styles.tipTitle}>{formatTick(months[active])}</div>
 
             {bars[active].map((seg) => (
               <div key={seg.key} className={styles.tipRow}>
