@@ -416,7 +416,13 @@ function ScopeCell({
 }) {
   const stacked = scope === "SPB";
 
-  if (kind === "band" && !stacked) return <div aria-hidden="true" />;
+  // Hai bảng này chỉ có ý nghĩa với Bulky:
+  //  - nhóm trọng lượng: Standard gần như toàn bộ nằm ở <15kg
+  //  - đội giao: Standard 100% do GHN giao ở mọi tháng, bảng chỉ toàn 0,0% / 100,0%
+  // Ô bên phải để trống chứ không dồn hàng, nếu không các hàng dưới sẽ lệch.
+  if ((kind === "band" || kind === "team") && !stacked) {
+    return <div aria-hidden="true" />;
+  }
 
   if (kind === "lane") {
     return (
