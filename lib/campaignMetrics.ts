@@ -116,6 +116,8 @@ export function teamRows(scope: DataScope): TeamRow[] {
 
 export interface ProvinceRow extends OdrCell {
   province: string;
+  /** Bóc tách theo đội giao; tỉnh nào đội đó không chạy thì các số bằng 0. */
+  byTeam: Record<DeliveryTeam, OdrCell>;
 }
 
 /**
@@ -130,15 +132,42 @@ export function topProvincesByVolume(
   direction: Direction,
   limit: number,
 ): ProvinceRow[] {
-  return CAMPAIGN_PROVINCES.filter(
+  const rows = CAMPAIGN_PROVINCES.filter(
     (r) =>
       r.scope === scope &&
       r.campaign === campaign &&
       r.type === "CP" &&
       r.day === "D0" &&
       r.direction === direction,
-  )
-    .map((r) => ({ province: r.province, ...cell(r.orders, r.ontime) }))
+  );
+
+  // Gộp các đội lại để xếp hạng, rồi mới bóc ngược ra từng đội. Xếp theo tổng
+  // chứ không theo từng đội, nếu không hai bảng con sẽ có danh sách tỉnh khác
+  // nhau và không đọc song song được.
+  const byProvince = new Map<string, typeof rows>();
+  for (const r of rows) {
+    const list = byProvince.get(r.province) ?? [];
+    list.push(r);
+    byProvince.set(r.province, list);
+  }
+
+  return [...byProvince.entries()]
+    .map(([province, list]) => {
+      const orders = list.reduce((a, r) => a + r.orders, 0);
+      const ontime = list.reduce((a, r) => a + r.ontime, 0);
+      const teamCell = (team: DeliveryTeam) => {
+        const picked = list.filter((r) => r.team === team);
+        return cell(
+          picked.reduce((a, r) => a + r.orders, 0),
+          picked.reduce((a, r) => a + r.ontime, 0),
+        );
+      };
+      return {
+        province,
+        ...cell(orders, ontime),
+        byTeam: { AHM: teamCell("AHM"), GHN: teamCell("GHN") },
+      };
+    })
     .sort((a, b) => b.orders - a.orders)
     .slice(0, limit);
 }

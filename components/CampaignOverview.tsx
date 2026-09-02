@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { SCOPE_LABEL } from "@/lib/labels";
 import { formatNumber, formatPercent, formatPp } from "@/lib/format";
-import type { Direction } from "@/lib/campaignData";
+import type { DeliveryTeam, Direction } from "@/lib/campaignData";
 import type { CampaignPayload } from "@/lib/campaignViewModel";
 import type { DataScope } from "@/lib/tabs";
 import VolumeChart, {
@@ -426,6 +426,12 @@ function TeamCard({
   );
 }
 
+/**
+ * GHN đứng trước AHM ở các bảng tỉnh: GHN là đội chủ lực, đọc cột lớn trước
+ * rồi tới cột nhỏ thì dễ so hơn.
+ */
+const PROVINCE_TEAM_ORDER: DeliveryTeam[] = ["GHN", "AHM"];
+
 function ProvinceCard({
   scope,
   payload,
@@ -438,28 +444,76 @@ function ProvinceCard({
   const latest = payload.latestCampaign;
   const rows = payload.scopes[scope].topProvinces[latest]?.[direction] ?? [];
   const isPickup = direction === "from";
+  // Chỉ Bulky mới bóc theo đội: Standard gần như toàn bộ do GHN giao nên tách
+  // ra chỉ được một cột toàn số 0 và một cột trùng với tổng.
+  const splitByTeam = scope === "SPB";
+  const rateLabel = isPickup ? "OPR" : "ODR";
 
   return (
     <Card
       scope={scope}
       title={`Top ${payload.topLimit} tỉnh ${isPickup ? "lấy" : "giao"} — ${latest}`}
-      note={`Xếp theo sản lượng ngày D, chiều ${isPickup ? "tỉnh lấy hàng" : "tỉnh giao hàng"}`}
+      note={`Xếp theo tổng sản lượng ngày D, chiều ${isPickup ? "tỉnh lấy hàng" : "tỉnh giao hàng"}`}
     >
       <div className={styles.tableScroll}>
         <table className={styles.table}>
-          <thead>
-            <tr>
-              <th scope="col">Tỉnh</th>
-              <th scope="col">Sản lượng</th>
-              {!isPickup && <th scope="col">ODR</th>}
-            </tr>
-          </thead>
+          {splitByTeam ? (
+            <thead>
+              <tr>
+                <th scope="col" rowSpan={2}>
+                  Tỉnh
+                </th>
+                {PROVINCE_TEAM_ORDER.map((team) => (
+                  <th key={team} scope="col" colSpan={2}>
+                    {team}
+                  </th>
+                ))}
+              </tr>
+              <tr>
+                {PROVINCE_TEAM_ORDER.map((team) => [
+                  <th key={`${team}-v`} scope="col">
+                    Sản lượng
+                  </th>,
+                  <th key={`${team}-r`} scope="col">
+                    {rateLabel}
+                  </th>,
+                ])}
+              </tr>
+            </thead>
+          ) : (
+            <thead>
+              <tr>
+                <th scope="col">Tỉnh</th>
+                <th scope="col">Sản lượng</th>
+                {!isPickup && <th scope="col">{rateLabel}</th>}
+              </tr>
+            </thead>
+          )}
+
           <tbody>
             {rows.map((r) => (
               <tr key={r.province}>
                 <th scope="row">{r.province}</th>
-                <td>{formatNumber(r.orders)}</td>
-                {!isPickup && <td>{formatPercent(r.odr)}</td>}
+                {splitByTeam
+                  ? PROVINCE_TEAM_ORDER.map((team) => [
+                      <td key={`${team}-v`}>
+                        {formatNumber(r.byTeam[team].orders)}
+                      </td>,
+                      <td key={`${team}-r`}>
+                        {/* OPR chưa có trong nguồn nên để trống, không lấy ODR
+                            dùng thay. Tỉnh đội đó không chạy cũng để trống chứ
+                            không hiện 0,0% — dễ đọc nhầm thành giao trễ hết. */}
+                        {isPickup || r.byTeam[team].orders === 0
+                          ? "—"
+                          : formatPercent(r.byTeam[team].odr)}
+                      </td>,
+                    ])
+                  : [
+                      <td key="v">{formatNumber(r.orders)}</td>,
+                      !isPickup ? (
+                        <td key="r">{formatPercent(r.odr)}</td>
+                      ) : null,
+                    ]}
               </tr>
             ))}
           </tbody>
@@ -467,9 +521,10 @@ function ProvinceCard({
       </div>
       {isPickup && (
         <p className={styles.pending}>
-          <b>Thiếu dữ liệu:</b> chưa có cột OPR. Tab <code>DD</code> chỉ có{" "}
-          <code>ontime_deli_odr_count</code> — là số liệu <b>giao</b>, không
-          phải <b>lấy</b>. Lấy ODR dùng thay sẽ sai bản chất nên để trống.
+          <b>Thiếu dữ liệu:</b> cột OPR đang để trống. Tab <code>DD</code> chỉ có{" "}
+          <code>ontime_deli_odr_count</code> — là số liệu <b>giao</b>, không phải{" "}
+          <b>lấy</b>. Lấy ODR dùng thay sẽ sai bản chất. Bổ sung cột OPR vào
+          nguồn là bảng tự điền.
         </p>
       )}
     </Card>
