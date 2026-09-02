@@ -9,9 +9,10 @@ import {
   laneShareByMonth,
   monthlyByBand,
   scopeProgress,
+  teamShareByMonth,
 } from "./bizMetrics";
 import type { DataScope } from "./tabs";
-import type { Lane, WeightBand } from "./labels";
+import type { DeliveryTeam, Lane, WeightBand } from "./labels";
 
 /**
  * Gói dữ liệu gửi ra cho giao diện. Chỉ chứa đúng những gì trang cần vẽ — số
@@ -49,6 +50,10 @@ export interface ScopePayload {
   bandShare: {
     month: string;
     cells: { band: WeightBand; created: number; share: number }[];
+  }[];
+  teamShare: {
+    month: string;
+    cells: { team: DeliveryTeam; created: number; share: number }[];
   }[];
 }
 
@@ -96,6 +101,7 @@ function buildScope(scope: DataScope): ScopePayload {
     })),
     laneShare: laneShareByMonth(scope),
     bandShare: bandShareByMonth(scope),
+    teamShare: teamShareByMonth(scope),
   };
 }
 

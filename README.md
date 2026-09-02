@@ -164,6 +164,32 @@ nonce trong HTML, và build phải cho ra `ƒ` chứ không phải `○`:
 npm run build 2>&1 | grep -E "^[┌├└]"
 ```
 
+## Nguồn dữ liệu đã đổi (02/09/2026)
+
+Sheet `tower control raw` đổi tên tab và thêm cột:
+
+| Trước | Bây giờ | Thay đổi |
+| --- | --- | --- |
+| `raw tab 1` | `vol` | Thêm `delivery_team`; phủ **T5–T9** thay vì T1–T8 |
+| `raw tab 2` | `DD` | Thêm `delivery_team` |
+
+Hai điểm trong tab `vol` dễ xử lý sai:
+
+- **`Cross metro *` là lane riêng**, tồn tại song song với `Cross metro`
+  (525.625 đơn). Giữ tách, không gộp.
+- **37 dòng thiếu lane** (~0,04%) gom vào `Không xác định` thay vì bỏ, để tổng
+  vẫn khớp nguồn.
+
+### YTD loại tháng đang chạy
+
+`scopeProgress` chỉ cộng các tháng **đã đủ** vào YTD. Tháng đang chạy luôn
+khuyết ngày trong khi AOP của nó là mục tiêu trọn tháng — gộp vào sẽ kéo tỷ lệ
+hoàn thành xuống giả tạo. Với T9 mới có 2 ngày, YTD rơi từ 75,9% xuống 58,6%
+nếu gộp. Tháng đang chạy nhìn riêng ở ô MTD, có nhãn "đang chạy".
+
+Quy tắc tự chỉnh theo lịch: tháng cuối trong dữ liệu trùng tháng hiện tại thì
+coi là chưa đủ.
+
 ## Mục tiêu: FC và AOP
 
 Hai loại mục tiêu khác nhau về ý nghĩa, đừng dùng lẫn:

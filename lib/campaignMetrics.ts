@@ -9,6 +9,7 @@ import {
   type DeliveryTeam,
   type Direction,
 } from "./campaignData";
+import { campaignFcFor } from "./targetData";
 import type { DataScope } from "./tabs";
 
 export interface OdrCell {
@@ -22,6 +23,11 @@ const EMPTY: OdrCell = { orders: 0, ontime: 0, odr: 0 };
 
 function cell(orders: number, ontime: number): OdrCell {
   return { orders, ontime, odr: orders === 0 ? 0 : ontime / orders };
+}
+
+/** Tỷ lệ hoàn thành; null khi không có mục tiêu để so, để giao diện bỏ trống. */
+function completion(actual: number, target: number | undefined) {
+  return target === undefined || target === 0 ? null : actual / target;
 }
 
 function lookup(
@@ -50,6 +56,9 @@ export interface CampaignRow {
   deltaD0Pp: number;
   /** Sản lượng ngày D gấp bao nhiêu lần ngày thường; null khi không có baseline. */
   liftVsBaseline: number | null;
+  /** Mức hoàn thành so FC của từng ngày; null khi kỳ đó chưa có file forecast. */
+  fcD0: number | null;
+  fcD1: number | null;
 }
 
 export function campaignRows(scope: DataScope): CampaignRow[] {
@@ -65,6 +74,8 @@ export function campaignRows(scope: DataScope): CampaignRow[] {
       deltaD0Pp: (cpD0.odr - baselineD0.odr) * 100,
       liftVsBaseline:
         baselineD0.orders === 0 ? null : cpD0.orders / baselineD0.orders,
+      fcD0: completion(cpD0.orders, campaignFcFor(scope, campaign, "D0")),
+      fcD1: completion(cpD1.orders, campaignFcFor(scope, campaign, "D+1")),
     };
   });
 }

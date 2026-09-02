@@ -7,6 +7,7 @@ import {
   BIZ_SOURCE_URL,
   LANE_ORDER,
   SCOPE_LABEL,
+  TEAM_ORDER,
   WEIGHT_ORDER,
   bandLabel,
 } from "@/lib/labels";
@@ -24,7 +25,7 @@ import styles from "./BizOverview.module.css";
 
 // Snapshot chốt giữa tháng 8 nên tháng cuối khuyết ngày — mọi con số MTD và
 // mức hoàn thành của tháng đó đều thấp hơn thực tế.
-const SNAPSHOT_LABEL = "19/08/2026";
+const SNAPSHOT_LABEL = "02/09/2026";
 
 type LoadState =
   | { status: "loading" }
@@ -110,6 +111,7 @@ export default function BizOverview() {
           <ChartRow kind="gtc" payload={payload} />
           <ChartRow kind="lane" payload={payload} />
           <ChartRow kind="band" payload={payload} />
+          <ChartRow kind="team" payload={payload} />
         </div>
       </Section>
 
@@ -118,10 +120,12 @@ export default function BizOverview() {
         <a href={BIZ_SOURCE_URL} target="_blank" rel="noopener noreferrer">
           tower control raw · raw tab 1 ↗
         </a>{" "}
-        · snapshot {BIZ_SNAPSHOT_AT}. Số liệu chốt tới <b>{SNAPSHOT_LABEL}</b>{" "}
-        nên {formatMonth(latestMonth)} chưa đủ tháng — sản lượng MTD và mức hoàn
-        thành của tháng này đều thấp hơn thực tế. FC đối chiếu với Created, AOP
-        đối chiếu với GTTC.
+        · snapshot {BIZ_SNAPSHOT_AT}. Nguồn hiện chỉ có <b>T5–T9/2026</b>; tháng
+        1–4 sẽ được bổ sung lại trên sheet sau. Số liệu chốt tới{" "}
+        <b>{SNAPSHOT_LABEL}</b> nên {formatMonth(latestMonth)} mới chạy được vài
+        ngày — cột tháng đó thấp hẳn là đúng, không phải sụt giảm. YTD chỉ cộng
+        các tháng đã đủ, tháng đang chạy nhìn riêng ở ô MTD. FC đối chiếu với
+        Created, AOP đối chiếu với GTTC.
       </p>
     </div>
   );
@@ -383,7 +387,7 @@ function ScopeHeading({ scope }: { scope: DataScope }) {
   );
 }
 
-type RowKind = "created" | "gtc" | "lane" | "band";
+type RowKind = "created" | "gtc" | "lane" | "band" | "team";
 
 /**
  * Một hàng của lưới = cùng một loại nội dung cho cả hai scope, đặt cạnh nhau để
@@ -434,6 +438,18 @@ function ScopeCell({
         note="Theo sản lượng Created"
       >
         <BandShareTable rows={data.bandShare} scope={scope} />
+      </ChartCard>
+    );
+  }
+
+  if (kind === "team") {
+    return (
+      <ChartCard
+        scope={scope}
+        title="Sản lượng theo đội giao"
+        note="Theo sản lượng Created"
+      >
+        <TeamShareTable rows={data.teamShare} />
       </ChartCard>
     );
   }
@@ -660,6 +676,48 @@ function BandShareTable({
               {row.cells.map((cell) => [
                 <td key={`${cell.band}-v`}>{formatNumber(cell.created)}</td>,
                 <td key={`${cell.band}-s`}>{formatPercent(cell.share)}</td>,
+              ])}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function TeamShareTable({ rows }: { rows: ScopePayload["teamShare"] }) {
+  return (
+    <div className={styles.tableScroll}>
+      <table className={styles.table}>
+        <thead>
+          <tr>
+            <th scope="col" rowSpan={2}>
+              Tháng
+            </th>
+            {TEAM_ORDER.map((team) => (
+              <th key={team} scope="col" colSpan={2}>
+                {team}
+              </th>
+            ))}
+          </tr>
+          <tr>
+            {TEAM_ORDER.map((team) => [
+              <th key={`${team}-v`} scope="col">
+                Sản lượng
+              </th>,
+              <th key={`${team}-s`} scope="col">
+                Tỷ trọng
+              </th>,
+            ])}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.month}>
+              <th scope="row">{formatMonthShort(row.month)}</th>
+              {row.cells.map((cell) => [
+                <td key={`${cell.team}-v`}>{formatNumber(cell.created)}</td>,
+                <td key={`${cell.team}-s`}>{formatPercent(cell.share)}</td>,
               ])}
             </tr>
           ))}

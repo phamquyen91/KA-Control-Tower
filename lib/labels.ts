@@ -6,23 +6,37 @@ import type { DataScope } from "./tabs";
 export const BIZ_SOURCE_SHEET_ID = "1WI5CrcFrTgDR4FNS8Un9RR-oHEvkdJWCj8OUTc2BFtk";
 export const BIZ_SOURCE_GID = "1213160480";
 export const BIZ_SOURCE_URL = `https://docs.google.com/spreadsheets/d/${BIZ_SOURCE_SHEET_ID}/edit?gid=${BIZ_SOURCE_GID}`;
-export const BIZ_SNAPSHOT_AT = "2026-08-19";
+export const BIZ_SNAPSHOT_AT = "2026-09-02";
 
+/**
+ * Giá trị lane giữ đúng như trong nguồn, kể cả cách viết hoa và dấu sao.
+ * `Cross metro *` là loại riêng, tồn tại song song với `Cross metro` — không gộp.
+ * `Không xác định` gom các dòng nguồn thiếu lane, để tổng vẫn khớp.
+ */
 export type Lane =
-  | "Intra City"
-  | "Intra Region"
-  | "Cross Region"
-  | "Cross Metro";
+  | "Intra city"
+  | "Intra region"
+  | "Cross region"
+  | "Cross metro"
+  | "Cross metro *"
+  | "Không xác định";
+
+export type DeliveryTeam = "AHM" | "GHN";
 
 export type WeightBand = "<15kg" | ">=15kg";
 
 /** Thứ tự lane từ gần tới xa — dùng cho mọi bảng để đọc nhất quán. */
 export const LANE_ORDER: Lane[] = [
-  "Intra City",
-  "Intra Region",
-  "Cross Region",
-  "Cross Metro",
+  "Intra city",
+  "Intra region",
+  "Cross region",
+  "Cross metro",
+  "Cross metro *",
+  "Không xác định",
 ];
+
+/** Thứ tự đội giao — AHM trước để so với GHN cho nhất quán mọi bảng. */
+export const TEAM_ORDER: DeliveryTeam[] = ["AHM", "GHN"];
 
 export const WEIGHT_ORDER: WeightBand[] = ["<15kg", ">=15kg"];
 

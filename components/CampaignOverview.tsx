@@ -6,7 +6,10 @@ import { formatNumber, formatPercent, formatPp } from "@/lib/format";
 import type { Direction } from "@/lib/campaignData";
 import type { CampaignPayload } from "@/lib/campaignViewModel";
 import type { DataScope } from "@/lib/tabs";
-import VolumeChart, { type BarSegment } from "./VolumeChart";
+import VolumeChart, {
+  type BarSegment,
+  type LineSeries,
+} from "./VolumeChart";
 import LineChart, { type ChartLine } from "./LineChart";
 import chart from "./VolumeChart.module.css";
 import styles from "./CampaignOverview.module.css";
@@ -110,7 +113,8 @@ export default function CampaignOverview() {
           tower control raw · tab DD ↗
         </a>{" "}
         · snapshot {payload.snapshotAt}. Sản lượng là số đơn trong mẫu đối soát,
-        không phải toàn bộ sản lượng. ODR tính lại theo trọng số đơn, không lấy
+        không phải toàn bộ sản lượng. FC lấy đúng cột ngày campaign trong file
+        forecast tháng của Shopee. ODR tính lại theo trọng số đơn, không lấy
         trung bình cộng ODR các tỉnh. Dữ liệu ngày thường chỉ có ở D0 nên so
         sánh với ngày thường luôn là CP D0 ↔ baseline D0.
       </p>
@@ -202,11 +206,28 @@ function VolumeCard({
     },
   ]);
 
+  const lines: LineSeries[] = [
+    {
+      key: "fc-d0",
+      label: "Ngày D vs FC",
+      dashed: false,
+      className: chart.lineD0,
+      values: data.rows.map((r) => r.fcD0),
+    },
+    {
+      key: "fc-d1",
+      label: "Ngày D+1 vs FC",
+      dashed: true,
+      className: chart.lineD1,
+      values: data.rows.map((r) => r.fcD1),
+    },
+  ];
+
   return (
     <Card
       scope={scope}
       title="Sản lượng ngày D và D+1"
-      note="Cột: đơn trong mẫu đối soát của từng ngày"
+      note="Cột: sản lượng từng ngày · Đường: mức hoàn thành so FC của chính ngày đó"
       legend={
         <div className={styles.legend}>
           <span>
@@ -217,22 +238,25 @@ function VolumeCard({
             <i className={styles.swD1} />
             Ngày D+1
           </span>
+          <span>
+            <i className={styles.lnD0} />
+            D vs FC
+          </span>
+          <span>
+            <i className={styles.lnD1} />
+            D+1 vs FC
+          </span>
         </div>
       }
     >
       <VolumeChart
         months={payload.campaigns}
         bars={bars}
-        lines={[]}
+        lines={lines}
         grouped
         formatTick={(c) => c}
-        ariaLabel={`Sản lượng ngày D và D+1 của ${SCOPE_LABEL[scope]}`}
+        ariaLabel={`Sản lượng và mức hoàn thành FC ngày D, D+1 của ${SCOPE_LABEL[scope]}`}
       />
-      <p className={styles.pending}>
-        <b>Thiếu dữ liệu:</b> chưa có đường so sánh với FC. Tab <code>DD</code>{" "}
-        không có cột dự báo cho ngày campaign — cần Shopee gửi FC theo ngày D và
-        D+1 thì mới vẽ được hai đường này.
-      </p>
     </Card>
   );
 }

@@ -3,7 +3,9 @@ import "server-only";
 import { BIZ_MONTHS, BIZ_ROWS, type BizRow } from "./bizData";
 import {
   LANE_ORDER,
+  TEAM_ORDER,
   WEIGHT_ORDER,
+  type DeliveryTeam,
   type Lane,
   type WeightBand,
 } from "./labels";
@@ -193,20 +195,38 @@ export interface ScopeProgress {
   spark: number[];
 }
 
-/** GTTC luỹ kế và GTTC tháng hiện tại, kèm mức hoàn thành so AOP cùng kỳ. */
+/** Tháng theo lịch hiện tại, dạng "YYYY-MM". */
+function currentMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/**
+ * GTTC luỹ kế và GTTC tháng hiện tại, kèm mức hoàn thành so AOP cùng kỳ.
+ *
+ * YTD chỉ cộng các tháng ĐÃ ĐỦ. Tháng đang chạy bị loại vì nó luôn khuyết ngày
+ * trong khi AOP của nó là mục tiêu trọn tháng — gộp vào sẽ kéo tỷ lệ hoàn thành
+ * xuống một cách giả tạo, và mức bóp méo càng lớn khi tháng mới bắt đầu.
+ * Tháng đang chạy được nhìn riêng ở ô MTD.
+ */
 export function scopeProgress(scope: DataScope): ScopeProgress {
   const series = monthlySeries(scope);
   const latest = series[series.length - 1];
+  const running = currentMonth();
+  const isPartial = latest.month === running;
 
-  const ytdGtc = series.reduce((acc, p) => acc + p.gtc, 0);
-  const ytdTarget = series.reduce(
+  const complete = isPartial ? series.slice(0, -1) : series;
+  const ytdSource = complete.length ? complete : series;
+
+  const ytdGtc = ytdSource.reduce((acc, p) => acc + p.gtc, 0);
+  const ytdTarget = ytdSource.reduce(
     (acc, p) => acc + (aopFor(scope, p.month) ?? 0),
     0,
   );
   const mtdTarget = aopFor(scope, latest.month) ?? 0;
 
-  const first = formatMonthShort(series[0].month);
-  const last = formatMonthShort(latest.month);
+  const first = formatMonthShort(ytdSource[0].month);
+  const last = formatMonthShort(ytdSource[ytdSource.length - 1].month);
 
   return {
     ytd: {
@@ -219,7 +239,9 @@ export function scopeProgress(scope: DataScope): ScopeProgress {
       gtc: latest.gtc,
       target: mtdTarget,
       completion: mtdTarget === 0 ? 0 : latest.gtc / mtdTarget,
-      periodLabel: `${formatMonth(latest.month)}`,
+      periodLabel: isPartial
+        ? `${formatMonth(latest.month)} · đang chạy`
+        : formatMonth(latest.month),
     },
     spark: series.map((p) => p.gtc),
   };
@@ -268,4 +290,34 @@ export function bandShareByMonth(scope: DataScope): BandShareRow[] {
       share: ratio(b.created, point.created),
     })),
   }));
+}
+
+export interface TeamShareRow {
+  month: string;
+  cells: { team: DeliveryTeam; created: number; share: number }[];
+}
+
+/**
+ * Sản lượng và tỷ trọng theo đội giao, mỗi hàng một tháng.
+ *
+ * Cùng khuôn với bảng theo nhóm trọng lượng để đọc song song được: cột tuyệt
+ * đối đứng cạnh cột tỷ trọng của chính đội đó.
+ */
+export function teamShareByMonth(scope: DataScope): TeamShareRow[] {
+  return BIZ_MONTHS.map((month) => {
+    const monthRows = BIZ_ROWS.filter(
+      (r) => r.scope === scope && r.month === month,
+    );
+    const total = sum(monthRows, "created");
+    return {
+      month,
+      cells: TEAM_ORDER.map((team) => {
+        const created = sum(
+          monthRows.filter((r) => r.team === team),
+          "created",
+        );
+        return { team, created, share: ratio(created, total) };
+      }),
+    };
+  });
 }
