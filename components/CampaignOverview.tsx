@@ -11,6 +11,7 @@ import VolumeChart, {
   type LineSeries,
 } from "./VolumeChart";
 import LineChart, { type ChartLine } from "./LineChart";
+import Toggle from "./Toggle";
 import chart from "./VolumeChart.module.css";
 import styles from "./CampaignOverview.module.css";
 
@@ -69,6 +70,9 @@ type LoadState =
 
 export default function CampaignOverview() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
+  // Kỳ đang xem của bốn bảng top tỉnh. Các chart phía trên luôn hiện đủ mọi kỳ
+  // nên không chịu ảnh hưởng của lựa chọn này.
+  const [provinceCampaign, setProvinceCampaign] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -118,6 +122,7 @@ export default function CampaignOverview() {
   }
 
   const { payload } = state;
+  const activeCampaign = provinceCampaign ?? payload.latestCampaign;
 
   return (
     <div className={styles.page}>
@@ -147,11 +152,48 @@ export default function CampaignOverview() {
           <TeamCard scope="SPB" payload={payload} />
           <div aria-hidden="true" />
 
-          <ProvinceCard scope="SPB" payload={payload} direction="from" />
-          <ProvinceCard scope="SPE" payload={payload} direction="from" />
+          <div className={styles.matrixSpan}>
+            <div className={styles.subHead}>
+              <h4>Top tỉnh theo kỳ campaign</h4>
+              <Toggle
+                ariaLabel="Chọn kỳ campaign để xem bảng tỉnh"
+                variant="blue"
+                size="sm"
+                value={activeCampaign}
+                onChange={setProvinceCampaign}
+                options={payload.campaigns.map((c) => ({
+                  value: c,
+                  label: c,
+                }))}
+              />
+            </div>
+          </div>
 
-          <ProvinceCard scope="SPB" payload={payload} direction="to" />
-          <ProvinceCard scope="SPE" payload={payload} direction="to" />
+          <ProvinceCard
+            scope="SPB"
+            payload={payload}
+            direction="from"
+            campaign={activeCampaign}
+          />
+          <ProvinceCard
+            scope="SPE"
+            payload={payload}
+            direction="from"
+            campaign={activeCampaign}
+          />
+
+          <ProvinceCard
+            scope="SPB"
+            payload={payload}
+            direction="to"
+            campaign={activeCampaign}
+          />
+          <ProvinceCard
+            scope="SPE"
+            payload={payload}
+            direction="to"
+            campaign={activeCampaign}
+          />
         </div>
       </Section>
 
@@ -486,13 +528,14 @@ function ProvinceCard({
   scope,
   payload,
   direction,
+  campaign,
 }: {
   scope: DataScope;
   payload: CampaignPayload;
   direction: Direction;
+  campaign: string;
 }) {
-  const latest = payload.latestCampaign;
-  const rows = payload.scopes[scope].topProvinces[latest]?.[direction] ?? [];
+  const rows = payload.scopes[scope].topProvinces[campaign]?.[direction] ?? [];
   const isPickup = direction === "from";
   // Chỉ Bulky mới bóc theo đội: Standard gần như toàn bộ do GHN giao nên tách
   // ra chỉ được một cột toàn số 0 và một cột trùng với tổng.
@@ -502,7 +545,7 @@ function ProvinceCard({
   return (
     <Card
       scope={scope}
-      title={`Top ${payload.topLimit} tỉnh ${isPickup ? "lấy" : "giao"} — ${latest}`}
+      title={`Top ${payload.topLimit} tỉnh ${isPickup ? "lấy" : "giao"} — ${campaign}`}
       note={`Xếp theo tổng sản lượng ngày D, chiều ${isPickup ? "tỉnh lấy hàng" : "tỉnh giao hàng"}`}
     >
       <div className={styles.tableScroll}>

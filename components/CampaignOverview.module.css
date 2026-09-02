@@ -614,3 +614,25 @@
 .groupDivider {
   border-left: 2px solid var(--text-3);
 }
+
+/* Ô chiếm trọn chiều ngang lưới — dùng cho thanh điều khiển đứng trên một
+   nhóm thẻ, để nó không bị bó vào một cột. */
+.matrixSpan {
+  grid-column: 1 / -1;
+}
+
+.subHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 6px;
+}
+
+.subHead h4 {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+}
