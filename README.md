@@ -199,12 +199,34 @@ Hai loại mục tiêu khác nhau về ý nghĩa, đừng dùng lẫn:
 | **FC** | Created volume | Dòng `Total` (= Pickup + Dropoff) trong các file `GHN_*_Forecast *.xlsx` |
 | **AOP** | GTTC volume | Bảng target AOP 2026 (dòng `SHOPEE` = Shopee Standard) |
 
-Sinh ra `lib/targetData.ts`. **FC của Bulky chỉ có từ T4/2026** — thư mục nguồn
-không có file FC tháng 1–3, nên đường hoàn thành bỏ trống ở các tháng đó thay vì
-vẽ 0%.
+Sinh ra `lib/targetData.ts` từ **toàn bộ** file forecast trong hai thư mục
+`FC SPE Bulky` và `FC SPE Express`. Hiện phủ **T1–T9/2026 cho cả hai scope**.
+
+Cách đọc file forecast:
+
+- Dòng lấy số là `Total`, vài file cũ ghi là `Hẹn lấy`. Dòng này bằng
+  `Pickup + Dropoff` — bộ sinh **kiểm tra lại trên từng ngày của mọi file**, hiện
+  không sai lệch chỗ nào.
+- Bulky tách hai block weight thành hai sheet. **Riêng T2/2026 hai block nằm ở
+  hai file riêng**, nên nhận diện block theo tên file khi tên sheet không nói gì
+  (sheet đều tên `Allocation Forecast`).
+- **T4 trong nguồn chỉ bắt đầu từ 03/04**, thiếu ngày 01 và 02 ở cả hai scope —
+  bản forecast phát hành muộn. FC tháng 4 vì thế thấp hơn thực tế một chút; đây
+  là đặc điểm của nguồn, không phải lỗi bóc.
+
+FC cho **ngày campaign** lấy từ chính các file này: CP 6.6 = 06/06 và 07/06,
+CP 7.7 = 07/07 và 08/07, CP 8.8 = 08/08 và 09/08.
 
 AOP chép tay từ bảng target nên đã tự kiểm tra: mọi tháng `10-15kg + 15kg++` khớp
 đúng dòng tổng Bulky, và tổng 12 tháng khớp cột FY (lệch 1 đơn vị do làm tròn).
+
+### Tháng đang chạy không có điểm hoàn thành
+
+`completion()` trả về `undefined` cho tháng trùng tháng hiện tại. Sản lượng mới
+có vài ngày trong khi mục tiêu là trọn tháng, tỷ lệ sẽ rơi xuống vài phần trăm và
+đường trên biểu đồ đổ dốc thẳng đứng, che mất biến động thật của các tháng trước.
+Cột sản lượng vẫn hiện nên không mất thông tin nào. Cùng nguyên tắc với việc YTD
+loại tháng đang chạy.
 
 ## Dữ liệu từ Google Sheet
 

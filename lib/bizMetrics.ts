@@ -31,6 +31,12 @@ export interface BreakdownRow<T extends string> {
   momCreated: number | null;
 }
 
+/** Tháng theo lịch hiện tại, dạng "YYYY-MM". */
+function currentMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
 function sum(rows: BizRow[], field: "created" | "gtc") {
   return rows.reduce((acc, r) => acc + r[field], 0);
 }
@@ -161,9 +167,20 @@ export function monthlyByBand(scope: DataScope): BandPoint[] {
   });
 }
 
-/** Tỷ lệ hoàn thành; undefined khi tháng đó không có mục tiêu để so. */
-function completion(actual: number, target: number | undefined) {
-  return target === undefined || target === 0 ? undefined : actual / target;
+/**
+ * Tỷ lệ hoàn thành; undefined khi không so được.
+ *
+ * Hai trường hợp bỏ trống:
+ *  - tháng đó không có mục tiêu trong nguồn
+ *  - tháng đang chạy: sản lượng mới có vài ngày trong khi mục tiêu là trọn
+ *    tháng, tỷ lệ sẽ rơi xuống vài phần trăm và đường trên biểu đồ đổ dốc
+ *    thẳng đứng, che mất biến động thật của các tháng trước. Cột sản lượng
+ *    vẫn hiện nên người xem không mất thông tin nào.
+ */
+function completion(month: string, actual: number, target: number | undefined) {
+  if (target === undefined || target === 0) return undefined;
+  if (month === currentMonth()) return undefined;
+  return actual / target;
 }
 
 export const fcCompletion = (
@@ -171,14 +188,14 @@ export const fcCompletion = (
   month: string,
   created: number,
   band?: WeightBand,
-) => completion(created, fcFor(scope, month, band));
+) => completion(month, created, fcFor(scope, month, band));
 
 export const aopCompletion = (
   scope: DataScope,
   month: string,
   gtc: number,
   band?: WeightBand,
-) => completion(gtc, aopFor(scope, month, band));
+) => completion(month, gtc, aopFor(scope, month, band));
 
 export interface ProgressStat {
   gtc: number;
@@ -193,12 +210,6 @@ export interface ScopeProgress {
   mtd: ProgressStat;
   /** Chuỗi GTTC theo tháng, dùng vẽ sparkline. */
   spark: number[];
-}
-
-/** Tháng theo lịch hiện tại, dạng "YYYY-MM". */
-function currentMonth() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
 /**
