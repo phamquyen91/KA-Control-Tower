@@ -7,7 +7,8 @@ import type { WeightBand } from "./labels";
 //  - FC  : sản lượng dự báo SPE gửi GHN, đối chiếu với CREATED.
 //  - AOP : mục tiêu sản lượng cả năm, đối chiếu với GTTC.
 //
-// FC lấy từ dòng "Total" (hoặc "Hẹn lấy" ở vài file cũ) của các file forecast
+// FC lấy từ dòng "Total" — vài file gọi là "Hẹn lấy" hoặc "Orderdate" — của
+// các file forecast
 // trong /GHN/SPE/FC SPE Bulky và /FC SPE Express. Dòng này bằng Pickup +
 // Dropoff — đã kiểm tra khớp trên TỪNG NGÀY của mọi file, không sai lệch chỗ nào.
 //
@@ -56,7 +57,7 @@ const FC_RAW: TargetTuple[] = [
   ["2026-01", "SPE", "total", 7000916],
   ["2026-02", "SPE", "total", 4414392],
   ["2026-03", "SPE", "total", 7310535],
-  ["2026-04", "SPE", "total", 6894062],
+  ["2026-04", "SPE", "total", 7283353],
   ["2026-05", "SPE", "total", 7103069],
   ["2026-06", "SPE", "total", 7540833],
   ["2026-07", "SPE", "total", 7177515],

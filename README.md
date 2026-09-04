@@ -210,9 +210,14 @@ Cách đọc file forecast:
 - Bulky tách hai block weight thành hai sheet. **Riêng T2/2026 hai block nằm ở
   hai file riêng**, nên nhận diện block theo tên file khi tên sheet không nói gì
   (sheet đều tên `Allocation Forecast`).
-- **T4 trong nguồn chỉ bắt đầu từ 03/04**, thiếu ngày 01 và 02 ở cả hai scope —
-  bản forecast phát hành muộn. FC tháng 4 vì thế thấp hơn thực tế một chút; đây
-  là đặc điểm của nguồn, không phải lỗi bóc.
+- Dòng lấy số còn có tên **`Orderdate`** ở một số file. Đã kiểm chứng nó bằng
+  `Pickup + Dropoff` trên từng ngày (sai số tối đa 1 đơn do làm tròn) nên dùng
+  như `Total`.
+- **Một tháng có thể có nhiều bản forecast.** Bộ sinh chọn bản phủ *nhiều ngày
+  nhất*: T4 của Standard có bản `Update0304` chỉ 28 ngày (phát hành muộn, bắt
+  đầu từ 03/04) và bản `FC_Apr2026 update 2603` đủ 30 ngày — bản đủ thắng.
+  **T4 của Bulky vẫn chỉ có bản 28 ngày**, nên FC tháng đó còn thấp hơn thực tế
+  một chút; xin bản đủ từ SPE là tự khớp.
 
 FC cho **ngày campaign** lấy từ chính các file này: CP 6.6 = 06/06 và 07/06,
 CP 7.7 = 07/07 và 08/07, CP 8.8 = 08/08 và 09/08.
