@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 import {
+  BIZ_DATA_THROUGH,
   BIZ_SNAPSHOT_AT,
   BIZ_SOURCE_URL,
   LANE_ORDER,
@@ -22,10 +23,6 @@ import type { DataScope } from "@/lib/tabs";
 import VolumeChart, { type BarSegment, type LineSeries } from "./VolumeChart";
 import chart from "./VolumeChart.module.css";
 import styles from "./BizOverview.module.css";
-
-// Snapshot chốt giữa tháng 8 nên tháng cuối khuyết ngày — mọi con số MTD và
-// mức hoàn thành của tháng đó đều thấp hơn thực tế.
-const SNAPSHOT_LABEL = "02/09/2026";
 
 type LoadState =
   | { status: "loading" }
@@ -122,10 +119,15 @@ export default function BizOverview() {
         </a>{" "}
         · snapshot {BIZ_SNAPSHOT_AT}. Nguồn hiện chỉ có <b>T5–T9/2026</b>; tháng
         1–4 sẽ được bổ sung lại trên sheet sau. Số liệu chốt tới{" "}
-        <b>{SNAPSHOT_LABEL}</b> nên {formatMonth(latestMonth)} mới chạy được vài
-        ngày — cột tháng đó thấp hẳn là đúng, không phải sụt giảm. YTD chỉ cộng
-        các tháng đã đủ, tháng đang chạy nhìn riêng ở ô MTD. FC đối chiếu với
-        Created, AOP đối chiếu với GTTC.
+        <b>{BIZ_DATA_THROUGH}</b> nên {formatMonth(latestMonth)} mới chạy được
+        vài ngày — cột tháng đó thấp hẳn là đúng, không phải sụt giảm. YTD chỉ
+        cộng các tháng đã đủ, tháng đang chạy nhìn riêng ở ô MTD. FC đối chiếu
+        với Created, AOP đối chiếu với GTTC.
+        <br />
+        <b>Lưu ý:</b> ngày chốt dữ liệu <code>{BIZ_DATA_THROUGH}</code> hiện
+        đang khai tay vì sheet nguồn chỉ gộp theo tháng, không có cột ngày. Mức
+        hoàn thành FC của tháng đang chạy phụ thuộc trực tiếp vào con số này —
+        sai ngày là sai tỷ lệ.
       </p>
     </div>
   );
@@ -509,7 +511,11 @@ function ScopeCell({
     <ChartCard
       scope={scope}
       title={isCreated ? "Created Volume" : "GTTC Volume"}
-      note={`Cột: sản lượng ${isCreated ? "Created" : "GTTC"} · Đường: mức hoàn thành so ${target} tháng`}
+      note={
+        isCreated
+          ? "Cột: sản lượng Created · Đường: mức hoàn thành so FC. Tháng đang chạy so với FC luỹ kế tới đúng ngày chốt dữ liệu"
+          : "Cột: sản lượng GTTC · Đường: mức hoàn thành so AOP tháng. Tháng đang chạy bỏ trống vì AOP không có số theo ngày"
+      }
       legend={
         <Legend
           scope={scope}

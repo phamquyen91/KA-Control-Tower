@@ -9,6 +9,18 @@ export const BIZ_SOURCE_URL = `https://docs.google.com/spreadsheets/d/${BIZ_SOUR
 export const BIZ_SNAPSHOT_AT = "2026-09-02";
 
 /**
+ * Ngày cuối cùng có số liệu thực tế trong sheet `vol`.
+ *
+ * Sheet chỉ gộp theo tháng nên không tự suy ra được; phải khai tay ở đây. Dùng
+ * để so sản lượng tháng đang chạy với đúng phần FC của những ngày đã có số,
+ * thay vì so với FC trọn tháng.
+ *
+ * ⚠️ ĐỔI GIÁ TRỊ NÀY mỗi lần cập nhật snapshot, nếu không mức hoàn thành của
+ * tháng đang chạy sẽ sai.
+ */
+export const BIZ_DATA_THROUGH = "2026-09-01";
+
+/**
  * Giá trị lane giữ đúng như trong nguồn, kể cả cách viết hoa và dấu sao.
  * `Cross metro *` là loại riêng, tồn tại song song với `Cross metro` — không gộp.
  * `Không xác định` gom các dòng nguồn thiếu lane, để tổng vẫn khớp.
