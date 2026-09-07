@@ -124,10 +124,10 @@ export default function BizOverview() {
         cộng các tháng đã đủ, tháng đang chạy nhìn riêng ở ô MTD. FC đối chiếu
         với Created, AOP đối chiếu với GTTC.
         <br />
-        <b>Lưu ý:</b> ngày chốt dữ liệu <code>{BIZ_DATA_THROUGH}</code> hiện
-        đang khai tay vì sheet nguồn chỉ gộp theo tháng, không có cột ngày. Mức
-        hoàn thành FC của tháng đang chạy phụ thuộc trực tiếp vào con số này —
-        sai ngày là sai tỷ lệ.
+        Sheet nguồn chạy tự động mỗi sáng cho số của ngày hôm trước, nên dữ liệu
+        dừng ở <code>{BIZ_DATA_THROUGH}</code>. Mức hoàn thành FC của{" "}
+        {formatMonth(latestMonth)} vì thế so với FC luỹ kế từ 01 tới đúng ngày
+        đó, không so với FC trọn tháng.
       </p>
     </div>
   );
@@ -513,8 +513,8 @@ function ScopeCell({
       title={isCreated ? "Created Volume" : "GTTC Volume"}
       note={
         isCreated
-          ? "Cột: sản lượng Created · Đường: mức hoàn thành so FC. Tháng đang chạy so với FC luỹ kế tới đúng ngày chốt dữ liệu"
-          : "Cột: sản lượng GTTC · Đường: mức hoàn thành so AOP tháng. Tháng đang chạy bỏ trống vì AOP không có số theo ngày"
+          ? "Cột: sản lượng Created · Đường: mức hoàn thành so FC. Tháng đang chạy so với FC luỹ kế từ đầu tháng tới ngày chốt dữ liệu"
+          : "Cột: sản lượng GTTC · Đường: mức hoàn thành so AOP trọn tháng — tháng đang chạy cho thấy đã đi được bao nhiêu phần mục tiêu"
       }
       legend={
         <Legend

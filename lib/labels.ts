@@ -11,14 +11,15 @@ export const BIZ_SNAPSHOT_AT = "2026-09-02";
 /**
  * Ngày cuối cùng có số liệu thực tế trong sheet `vol`.
  *
- * Sheet chỉ gộp theo tháng nên không tự suy ra được; phải khai tay ở đây. Dùng
- * để so sản lượng tháng đang chạy với đúng phần FC của những ngày đã có số,
- * thay vì so với FC trọn tháng.
- *
- * ⚠️ ĐỔI GIÁ TRỊ NÀY mỗi lần cập nhật snapshot, nếu không mức hoàn thành của
- * tháng đang chạy sẽ sai.
+ * Sheet chạy tự động mỗi sáng, nạp số của ngày hôm trước. Nên dữ liệu luôn
+ * dừng ở đúng một ngày trước ngày lấy snapshot — suy ra được, không cần khai
+ * tay và không sợ quên cập nhật: đổi `BIZ_SNAPSHOT_AT` là ngày này tự theo.
  */
-export const BIZ_DATA_THROUGH = "2026-09-01";
+export const BIZ_DATA_THROUGH = (() => {
+  const d = new Date(`${BIZ_SNAPSHOT_AT}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+})();
 
 /**
  * Giá trị lane giữ đúng như trong nguồn, kể cả cách viết hoa và dấu sao.

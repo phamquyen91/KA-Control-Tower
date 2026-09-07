@@ -225,13 +225,21 @@ CP 7.7 = 07/07 và 08/07, CP 8.8 = 08/08 và 09/08.
 AOP chép tay từ bảng target nên đã tự kiểm tra: mọi tháng `10-15kg + 15kg++` khớp
 đúng dòng tổng Bulky, và tổng 12 tháng khớp cột FY (lệch 1 đơn vị do làm tròn).
 
-### Tháng đang chạy không có điểm hoàn thành
+### Hai chart tính mức hoàn thành theo hai cách khác nhau — có chủ đích
 
-`completion()` trả về `undefined` cho tháng trùng tháng hiện tại. Sản lượng mới
-có vài ngày trong khi mục tiêu là trọn tháng, tỷ lệ sẽ rơi xuống vài phần trăm và
-đường trên biểu đồ đổ dốc thẳng đứng, che mất biến động thật của các tháng trước.
-Cột sản lượng vẫn hiện nên không mất thông tin nào. Cùng nguyên tắc với việc YTD
-loại tháng đang chạy.
+| Chart | Mẫu số | Tháng đang chạy |
+| --- | --- | --- |
+| Created vs **FC** | FC luỹ kế **từ 01 tới ngày chốt dữ liệu** | So sòng phẳng, ra tỷ lệ dùng được |
+| GTTC vs **AOP** | AOP **trọn tháng** | Thấp là đúng — đo "đã đi được bao nhiêu phần mục tiêu" |
+
+FC có số theo từng ngày nên cắt được đúng phần đã chạy. AOP chỉ có ở mức tháng
+nên giữ nguyên mẫu số trọn tháng; đó là thước đo tiến độ, không phải nhịp độ.
+
+`BIZ_DATA_THROUGH` **suy ra từ `BIZ_SNAPSHOT_AT` trừ một ngày**, không khai tay:
+sheet chạy tự động mỗi sáng nạp số của hôm trước, nên dữ liệu luôn dừng đúng một
+ngày trước ngày lấy snapshot. Đổi ngày snapshot là ngày chốt tự theo.
+
+YTD vẫn chỉ cộng các tháng đã đủ — xem `scopeProgress`.
 
 ## Dữ liệu từ Google Sheet
 

@@ -196,20 +196,17 @@ export const fcCompletion = (
 /**
  * Mức hoàn thành AOP.
  *
- * Tháng đang chạy bỏ trống. Khác FC, AOP chỉ có ở mức tháng — không có hình
- * dạng theo ngày để cắt cho công bằng. Chia đều theo số ngày đã trôi qua sẽ
- * sai vì sản lượng ngày trong tháng chênh nhau rất lớn. Cột sản lượng vẫn
- * hiện nên không mất thông tin.
+ * Luôn là sản lượng thực tế chia cho AOP TRỌN THÁNG, kể cả tháng đang chạy —
+ * đây là "đã đi được bao nhiêu phần của mục tiêu tháng tính tới hôm nay", chứ
+ * không phải thước đo nhịp độ. Vì vậy tháng đang chạy thấp là đúng bản chất,
+ * không phải lỗi so sánh.
  */
 export const aopCompletion = (
   scope: DataScope,
   month: string,
   gtc: number,
   band?: WeightBand,
-) =>
-  month === currentMonth()
-    ? undefined
-    : ratioOf(gtc, aopFor(scope, month, band));
+) => ratioOf(gtc, aopFor(scope, month, band));
 
 export interface ProgressStat {
   gtc: number;
