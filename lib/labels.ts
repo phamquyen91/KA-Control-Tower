@@ -6,21 +6,6 @@ import type { DataScope } from "./tabs";
 export const BIZ_SOURCE_SHEET_ID = "1WI5CrcFrTgDR4FNS8Un9RR-oHEvkdJWCj8OUTc2BFtk";
 export const BIZ_SOURCE_GID = "1213160480";
 export const BIZ_SOURCE_URL = `https://docs.google.com/spreadsheets/d/${BIZ_SOURCE_SHEET_ID}/edit?gid=${BIZ_SOURCE_GID}`;
-export const BIZ_SNAPSHOT_AT = "2026-09-02";
-
-/**
- * Ngày cuối cùng có số liệu thực tế trong sheet `vol`.
- *
- * Sheet chạy tự động mỗi sáng, nạp số của ngày hôm trước. Nên dữ liệu luôn
- * dừng ở đúng một ngày trước ngày lấy snapshot — suy ra được, không cần khai
- * tay và không sợ quên cập nhật: đổi `BIZ_SNAPSHOT_AT` là ngày này tự theo.
- */
-export const BIZ_DATA_THROUGH = (() => {
-  const d = new Date(`${BIZ_SNAPSHOT_AT}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() - 1);
-  return d.toISOString().slice(0, 10);
-})();
-
 /**
  * Giá trị lane giữ đúng như trong nguồn, kể cả cách viết hoa và dấu sao.
  * `Cross metro *` là loại riêng, tồn tại song song với `Cross metro` — không gộp.

@@ -1,7 +1,7 @@
 import "server-only";
 
-import { BIZ_MONTHS } from "./bizData";
-import { BIZ_SNAPSHOT_AT, BIZ_SOURCE_URL, WEIGHT_ORDER } from "./labels";
+import { getBizDataset, type BizDataset } from "./bizData";
+import { BIZ_SOURCE_URL, WEIGHT_ORDER } from "./labels";
 import {
   aopCompletion,
   bandShareByMonth,
@@ -13,6 +13,7 @@ import {
 } from "./bizMetrics";
 import type { DataScope } from "./tabs";
 import type { DeliveryTeam, Lane, WeightBand } from "./labels";
+import type { DataSource } from "./sheetSource";
 
 /**
  * Gói dữ liệu gửi ra cho giao diện. Chỉ chứa đúng những gì trang cần vẽ — số
@@ -20,7 +21,8 @@ import type { DeliveryTeam, Lane, WeightBand } from "./labels";
  */
 export interface BizPayload {
   months: string[];
-  snapshotAt: string;
+  /** Nguồn đang dùng (live/snapshot), ngày chốt dữ liệu, lý do rơi về bản chụp nếu có. */
+  source: DataSource;
   sourceUrl: string;
   scopes: Record<DataScope, ScopePayload>;
 }
@@ -51,10 +53,13 @@ export interface ScopePayload {
     month: string;
     cells: { band: WeightBand; created: number; share: number }[];
   }[];
-  teamShare: {
-    month: string;
-    cells: { team: DeliveryTeam; created: number; share: number }[];
-  }[];
+  /** null khi tab nguồn không có cột delivery_team. */
+  teamShare:
+    | {
+        month: string;
+        cells: { team: DeliveryTeam; created: number; share: number }[];
+      }[]
+    | null;
 }
 
 interface ProgressPayload {
@@ -64,8 +69,8 @@ interface ProgressPayload {
   periodLabel: string;
 }
 
-function buildScope(scope: DataScope): ScopePayload {
-  const progress = scopeProgress(scope);
+function buildScope(ds: BizDataset, scope: DataScope): ScopePayload {
+  const progress = scopeProgress(ds, scope);
 
   return {
     progress: {
@@ -73,19 +78,19 @@ function buildScope(scope: DataScope): ScopePayload {
       mtd: progress.mtd,
       spark: progress.spark,
     },
-    points: monthlyByBand(scope).map((p) => ({
+    points: monthlyByBand(ds, scope).map((p) => ({
       month: p.month,
       bands: p.bands,
       created: p.created,
       gtc: p.gtc,
-      fcTotal: fcCompletion(scope, p.month, p.created) ?? null,
+      fcTotal: fcCompletion(ds, scope, p.month, p.created) ?? null,
       aopTotal: aopCompletion(scope, p.month, p.gtc) ?? null,
       fcByBand: Object.fromEntries(
         WEIGHT_ORDER.map((band) => {
           const cell = p.bands.find((b) => b.band === band);
           return [
             band,
-            cell ? (fcCompletion(scope, p.month, cell.created, band) ?? null) : null,
+            cell ? (fcCompletion(ds, scope, p.month, cell.created, band) ?? null) : null,
           ];
         }),
       ),
@@ -99,20 +104,21 @@ function buildScope(scope: DataScope): ScopePayload {
         }),
       ),
     })),
-    laneShare: laneShareByMonth(scope),
-    bandShare: bandShareByMonth(scope),
-    teamShare: teamShareByMonth(scope),
+    laneShare: laneShareByMonth(ds, scope),
+    bandShare: bandShareByMonth(ds, scope),
+    teamShare: teamShareByMonth(ds, scope),
   };
 }
 
-export function buildBizPayload(): BizPayload {
+export async function buildBizPayload(): Promise<BizPayload> {
+  const ds = await getBizDataset();
   return {
-    months: BIZ_MONTHS,
-    snapshotAt: BIZ_SNAPSHOT_AT,
+    months: ds.months,
+    source: ds.source,
     sourceUrl: BIZ_SOURCE_URL,
     scopes: {
-      SPB: buildScope("SPB"),
-      SPE: buildScope("SPE"),
+      SPB: buildScope(ds, "SPB"),
+      SPE: buildScope(ds, "SPE"),
     },
   };
 }

@@ -14,6 +14,7 @@ import LineChart, { type ChartLine } from "./LineChart";
 import Toggle from "./Toggle";
 import chart from "./VolumeChart.module.css";
 import styles from "./CampaignOverview.module.css";
+import { FallbackWarning, SourceLine } from "./SourceLine";
 
 /**
  * Ngưỡng đạt của cả ODR lẫn OPR. Dưới ngưỡng thì ô được tô đỏ, càng hụt sâu
@@ -197,16 +198,19 @@ export default function CampaignOverview() {
         </div>
       </Section>
 
+      <FallbackWarning source={payload.source} className={styles.pending} />
       <p className={styles.footnote}>
-        Nguồn:{" "}
+        <SourceLine source={payload.source} tab="DD · DD OPR" />{" "}
         <a href={payload.sourceUrl} target="_blank" rel="noopener noreferrer">
-          tower control raw · tab DD ↗
-        </a>{" "}
-        · snapshot {payload.snapshotAt}. Sản lượng là số đơn trong mẫu đối soát,
-        không phải toàn bộ sản lượng. FC lấy đúng cột ngày campaign trong file
-        forecast tháng của Shopee. ODR tính lại theo trọng số đơn, không lấy
-        trung bình cộng ODR các tỉnh. Dữ liệu ngày thường chỉ có ở D0 nên so
-        sánh với ngày thường luôn là CP D0 ↔ baseline D0.
+          Mở sheet ↗
+        </a>
+        <br />
+        Sản lượng là số đơn trong mẫu đối soát, không phải toàn bộ sản lượng.
+        FC lấy đúng ngày D và D+1 trong file forecast ngày của Shopee. ODR và
+        OPR tính lại theo trọng số đơn, không lấy trung bình cộng các tỉnh.
+        Ngày thường chỉ có ở D0 nên so sánh luôn là CP D0 ↔ ngày thường D0.
+        Kỳ chưa đủ {payload.settleDays} ngày sau D+1 được đánh dấu &ldquo;chưa
+        chốt&rdquo; và để trống ODR/OPR.
       </p>
     </div>
   );
@@ -365,14 +369,16 @@ function OdrCard({
       label: "ODR ngày D",
       dashed: false,
       className: chart.lineD0,
-      values: data.rows.map((r) => r.cpD0.odr),
+      // Kỳ chưa chốt để trống: đơn còn đang đi đường bị tính là chưa đúng hạn,
+      // ODR sẽ tụt xuống vài chục phần trăm và kéo cả đường đổ dốc giả.
+      values: data.rows.map((r) => (r.settled ? r.cpD0.odr : null)),
     },
     {
       key: "d1",
       label: "ODR ngày D+1",
       dashed: true,
       className: chart.lineD1,
-      values: data.rows.map((r) => r.cpD1.odr),
+      values: data.rows.map((r) => (r.settled ? r.cpD1.odr : null)),
     },
     {
       key: "base",
@@ -387,7 +393,7 @@ function OdrCard({
     <Card
       scope={scope}
       title="ODR qua các kỳ"
-      note="Tỷ lệ giao đúng hạn, so ngày D với D+1 và ngày thường"
+      note={`Tỷ lệ giao đúng hạn, so ngày D với D+1 và ngày thường. Kỳ chưa đủ ${payload.settleDays} ngày sau D+1 để trống vì đơn chưa giao xong`}
       legend={
         <div className={styles.legend}>
           <span>
@@ -426,6 +432,7 @@ function PeriodCard({
   payload: CampaignPayload;
 }) {
   const rows = payload.scopes[scope].rows;
+  const hasLift = payload.baselinePerDay;
   return (
     <Card scope={scope} title="Thống kê theo kỳ campaign">
       <div className={styles.tableScroll}>
@@ -435,33 +442,56 @@ function PeriodCard({
               <th scope="col">Kỳ</th>
               <th scope="col">Đơn ngày D</th>
               <th scope="col">Đơn ngày D+1</th>
+              {hasLift && <th scope="col">Gấp ngày thường</th>}
               <th scope="col">ODR ngày D</th>
               <th scope="col">vs ngày thường</th>
+              {payload.hasOpr && <th scope="col">OPR ngày D</th>}
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.campaign}>
-                <th scope="row">{r.campaign}</th>
+                <th scope="row">
+                  {r.campaign}
+                  {!r.settled && (
+                    <span className={styles.badgeSettling}>chưa chốt</span>
+                  )}
+                </th>
                 <td>{formatNumber(r.cpD0.orders)}</td>
                 <td>{formatNumber(r.cpD1.orders)}</td>
-                <RateCell value={r.cpD0.odr} />
-                <td className={r.deltaD0Pp >= 0 ? styles.up : styles.down}>
-                  {formatPp(r.deltaD0Pp)}
-                </td>
+                {hasLift && (
+                  <td>
+                    {r.liftVsBaseline === null
+                      ? "—"
+                      : `${r.liftVsBaseline.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}×`}
+                  </td>
+                )}
+                {/* Kỳ chưa chốt: để trống cả ODR lẫn chênh lệch, không hiện số
+                    thấp giả rồi tô đỏ oan. */}
+                <RateCell value={r.settled ? r.cpD0.odr : null} />
+                {r.settled ? (
+                  <td className={r.deltaD0Pp >= 0 ? styles.up : styles.down}>
+                    {formatPp(r.deltaD0Pp)}
+                  </td>
+                ) : (
+                  <td>—</td>
+                )}
+                {payload.hasOpr && (
+                  <RateCell value={r.settled && r.oprD0 ? r.oprD0.odr : null} />
+                )}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <p className={styles.pending}>
-        <b>Thiếu dữ liệu:</b> chưa có cột &ldquo;gấp bao nhiêu lần ngày
-        thường&rdquo;. Số baseline trong nguồn là <b>tổng nhiều ngày</b> chứ
-        không phải một ngày, nên chia thẳng sẽ ra dưới 1 lần và bị đọc thành
-        campaign thấp hơn ngày thường. Cần biết baseline gộp bao nhiêu ngày mới
-        quy về mức mỗi ngày được. Cột &ldquo;vs ngày thường&rdquo; ở trên là
-        chênh lệch <b>ODR</b>, không phải sản lượng.
-      </p>
+      {!hasLift && (
+        <p className={styles.pending}>
+          <b>Thiếu dữ liệu:</b> chưa có cột &ldquo;gấp bao nhiêu lần ngày
+          thường&rdquo; vì baseline trong nguồn là <b>tổng nhiều ngày</b> chứ
+          không phải trung bình mỗi ngày. Đổi baseline sang trung bình ngày
+          (nhãn <code>D0 (avg 7d)</code>) là cột tự hiện.
+        </p>
+      )}
     </Card>
   );
 }
@@ -587,7 +617,9 @@ function ProvinceCard({
               <tr>
                 <th scope="col">Tỉnh</th>
                 <th scope="col">Sản lượng</th>
-                {!isPickup && <th scope="col">{rateLabel}</th>}
+                {(!isPickup || payload.hasOpr) && (
+                  <th scope="col">{rateLabel}</th>
+                )}
               </tr>
             </thead>
           )}
@@ -604,35 +636,40 @@ function ProvinceCard({
                       >
                         {formatNumber(r.byTeam[team].orders)}
                       </td>,
-                      // OPR chưa có trong nguồn nên để trống, không lấy ODR
-                      // dùng thay. Tỉnh đội đó không chạy cũng để trống chứ
-                      // không hiện 0,0% — dễ đọc nhầm thành giao trễ hết.
+                      // Chiều lấy dùng OPR từ tab riêng, chiều giao dùng ODR.
+                      // Tỉnh đội đó không chạy thì để trống chứ không hiện
+                      // 0,0% — dễ đọc nhầm thành trễ hết.
                       <RateCell
                         key={`${team}-r`}
                         value={
-                          isPickup || r.byTeam[team].orders === 0
-                            ? null
-                            : r.byTeam[team].odr
+                          isPickup
+                            ? r.oprByTeam[team]?.odr ?? null
+                            : r.byTeam[team].orders === 0
+                              ? null
+                              : r.byTeam[team].odr
                         }
                       />,
                     ])
                   : [
                       <td key="v">{formatNumber(r.orders)}</td>,
-                      !isPickup ? (
+                      isPickup ? (
+                        payload.hasOpr ? (
+                          <RateCell key="r" value={r.opr?.odr ?? null} />
+                        ) : null
+                      ) : (
                         <RateCell key="r" value={r.odr} />
-                      ) : null,
+                      ),
                     ]}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {isPickup && (
+      {isPickup && !payload.hasOpr && (
         <p className={styles.pending}>
-          <b>Thiếu dữ liệu:</b> cột OPR đang để trống. Tab <code>DD</code> chỉ có{" "}
-          <code>ontime_deli_odr_count</code> — là số liệu <b>giao</b>, không phải{" "}
-          <b>lấy</b>. Lấy ODR dùng thay sẽ sai bản chất. Bổ sung cột OPR vào
-          nguồn là bảng tự điền.
+          <b>Thiếu dữ liệu:</b> cột OPR đang để trống vì tab <code>DD OPR</code>{" "}
+          chưa có dòng nào. Tab <code>DD</code> chỉ có số <b>giao</b>, lấy ODR
+          dùng thay sẽ sai bản chất.
         </p>
       )}
     </Card>

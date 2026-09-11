@@ -1,12 +1,14 @@
 import "server-only";
 
 import {
-  CAMPAIGNS,
-  CAMPAIGN_SNAPSHOT_AT,
+  getCampaignDataset,
+  SETTLE_DAYS,
   TOTAL_PROVINCES,
+  type CampaignDataset,
   type Direction,
 } from "./campaignData";
 import { BIZ_SOURCE_URL } from "./labels";
+import type { DataSource } from "./sheetSource";
 import {
   campaignRows,
   latestCampaign,
@@ -32,34 +34,47 @@ export interface CampaignScopePayload {
 export interface CampaignPayload {
   campaigns: string[];
   latestCampaign: string;
-  snapshotAt: string;
+  source: DataSource;
   sourceUrl: string;
+  /** Baseline trong nguồn là trung bình mỗi ngày — cột "gấp ngày thường" mới có nghĩa. */
+  baselinePerDay: boolean;
+  /** Tab OPR có dữ liệu hay không. */
+  hasOpr: boolean;
+  settleDays: number;
   topLimit: number;
   totalProvinces: number;
   scopes: Record<DataScope, CampaignScopePayload>;
 }
 
-function buildScope(scope: DataScope): CampaignScopePayload {
+function buildScope(ds: CampaignDataset, scope: DataScope): CampaignScopePayload {
   const topProvinces: Record<string, Record<Direction, ProvinceRow[]>> = {};
 
-  for (const campaign of CAMPAIGNS) {
+  for (const campaign of ds.campaigns) {
     topProvinces[campaign] = {
-      from: topProvincesByVolume(scope, campaign, "from", TOP_PROVINCE_LIMIT),
-      to: topProvincesByVolume(scope, campaign, "to", TOP_PROVINCE_LIMIT),
+      from: topProvincesByVolume(ds, scope, campaign, "from", TOP_PROVINCE_LIMIT),
+      to: topProvincesByVolume(ds, scope, campaign, "to", TOP_PROVINCE_LIMIT),
     };
   }
 
-  return { rows: campaignRows(scope), teams: teamRows(scope), topProvinces };
+  return {
+    rows: campaignRows(ds, scope),
+    teams: teamRows(ds, scope),
+    topProvinces,
+  };
 }
 
-export function buildCampaignPayload(): CampaignPayload {
+export async function buildCampaignPayload(): Promise<CampaignPayload> {
+  const ds = await getCampaignDataset();
   return {
-    campaigns: CAMPAIGNS,
-    latestCampaign: latestCampaign(),
-    snapshotAt: CAMPAIGN_SNAPSHOT_AT,
+    campaigns: ds.campaigns,
+    latestCampaign: latestCampaign(ds),
+    source: ds.source,
     sourceUrl: BIZ_SOURCE_URL,
+    baselinePerDay: ds.baselinePerDay,
+    hasOpr: ds.opr.length > 0,
+    settleDays: SETTLE_DAYS,
     topLimit: TOP_PROVINCE_LIMIT,
     totalProvinces: TOTAL_PROVINCES,
-    scopes: { SPB: buildScope("SPB"), SPE: buildScope("SPE") },
+    scopes: { SPB: buildScope(ds, "SPB"), SPE: buildScope(ds, "SPE") },
   };
 }

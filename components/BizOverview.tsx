@@ -3,9 +3,6 @@
 import { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 import {
-  BIZ_DATA_THROUGH,
-  BIZ_SNAPSHOT_AT,
-  BIZ_SOURCE_URL,
   LANE_ORDER,
   SCOPE_LABEL,
   TEAM_ORDER,
@@ -21,6 +18,7 @@ import {
 import type { BizPayload, ScopePayload } from "@/lib/bizViewModel";
 import type { DataScope } from "@/lib/tabs";
 import VolumeChart, { type BarSegment, type LineSeries } from "./VolumeChart";
+import { FallbackWarning, SourceLine } from "./SourceLine";
 import chart from "./VolumeChart.module.css";
 import styles from "./BizOverview.module.css";
 
@@ -112,22 +110,18 @@ export default function BizOverview() {
         </div>
       </Section>
 
+      <FallbackWarning source={payload.source} className={styles.pending} />
       <p className={styles.footnote}>
-        Nguồn:{" "}
-        <a href={BIZ_SOURCE_URL} target="_blank" rel="noopener noreferrer">
-          tower control raw · raw tab 1 ↗
-        </a>{" "}
-        · snapshot {BIZ_SNAPSHOT_AT}. Nguồn hiện chỉ có <b>T5–T9/2026</b>; tháng
-        1–4 sẽ được bổ sung lại trên sheet sau. Số liệu chốt tới{" "}
-        <b>{BIZ_DATA_THROUGH}</b> nên {formatMonth(latestMonth)} mới chạy được
-        vài ngày — cột tháng đó thấp hẳn là đúng, không phải sụt giảm. YTD chỉ
-        cộng các tháng đã đủ, tháng đang chạy nhìn riêng ở ô MTD. FC đối chiếu
-        với Created, AOP đối chiếu với GTTC.
+        <SourceLine source={payload.source} tab="vol" />{" "}
+        <a href={payload.sourceUrl} target="_blank" rel="noopener noreferrer">
+          Mở sheet ↗
+        </a>
         <br />
-        Sheet nguồn chạy tự động mỗi sáng cho số của ngày hôm trước, nên dữ liệu
-        dừng ở <code>{BIZ_DATA_THROUGH}</code>. Mức hoàn thành FC của{" "}
-        {formatMonth(latestMonth)} vì thế so với FC luỹ kế từ 01 tới đúng ngày
-        đó, không so với FC trọn tháng.
+        {formatMonth(latestMonth)} mới chạy tới {payload.source.dataThrough} —
+        cột tháng đó thấp hẳn là đúng, không phải sụt giảm. YTD chỉ cộng các
+        tháng đã đủ, tháng đang chạy nhìn riêng ở ô MTD. FC đối chiếu với
+        Created, AOP đối chiếu với GTTC; mức hoàn thành FC của tháng đang chạy
+        so với FC luỹ kế từ 01 tới đúng ngày chốt, không so với FC trọn tháng.
       </p>
     </div>
   );
@@ -712,6 +706,15 @@ function BandShareTable({
 }
 
 function TeamShareTable({ rows }: { rows: ScopePayload["teamShare"] }) {
+  if (!rows) {
+    return (
+      <p className={styles.pending}>
+        <b>Thiếu nguồn:</b> tab <code>vol</code> hiện không có cột{" "}
+        <code>delivery_team</code> nên không bóc được sản lượng theo đội giao.
+        Thêm lại cột đó vào sheet là bảng tự hiện.
+      </p>
+    );
+  }
   return (
     <div className={styles.tableScroll}>
       <table className={styles.table}>

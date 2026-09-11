@@ -1,215 +1,38 @@
 import "server-only";
 
-import type { DataScope } from "./tabs";
-import type { Lane, WeightBand, DeliveryTeam } from "./labels";
+import { getDatasets, type DataSource } from "./sheetSource";
+import type { BizRow } from "./sheetParse";
 
-// SỐ LIỆU NHẠY CẢM — module đánh dấu `server-only`, build sẽ fail nếu có
-// component client lỡ import. Giao diện lấy số qua /api/biz, route đó kiểm tra
-// đăng nhập và allowlist trước khi trả dữ liệu.
+export type { BizRow } from "./sheetParse";
+
+// Tab Tình hình kinh doanh: sản lượng tháng từ tab `vol`.
 //
-// Nguồn: Google Sheet "tower control raw", tab `vol`.
-// Cách cập nhật: xuất lại tab đó ra CSV rồi sinh lại file này.
-//
-// LƯU Ý PHỦ DỮ LIỆU: nguồn hiện chỉ có T5-T9/2026. Tháng 1-4 sẽ được bổ sung
-// lại trên sheet sau. Tháng cuối trong dữ liệu thường mới chạy được vài ngày
-// nên sản lượng thấp hẳn — giao diện phải nói rõ, đừng để đọc thành sụt giảm.
+// Số liệu đến từ lib/sheetSource.ts (đọc sheet trực tiếp, hoặc bản chụp khi
+// không có service account). Module này chỉ gói lại thành dataset cho metrics
+// dùng — không giữ số nào trong code nữa.
 //
 // LƯU Ý VỀ LANE: nguồn có `Cross metro *` là loại riêng, tồn tại song song với
 // `Cross metro` — giữ tách chứ không gộp. Các dòng thiếu lane gom vào
 // "Không xác định" thay vì bỏ đi, để tổng vẫn khớp nguồn.
+//
+// LƯU Ý VỀ ĐỘI GIAO: tab `vol` đã có lúc bỏ cột `delivery_team`. `hasTeam`
+// nói rõ nguồn hiện có bóc theo đội hay không; không có thì bảng đội giao phải
+// báo thiếu nguồn chứ không hiện toàn 0.
 
-export interface BizRow {
-  month: string;
-  scope: DataScope;
-  lane: Lane;
-  weight: WeightBand;
-  team: DeliveryTeam;
-  created: number;
-  gtc: number;
+export interface BizDataset {
+  rows: BizRow[];
+  /** Các tháng có mặt trong dữ liệu, tăng dần. */
+  months: string[];
+  hasTeam: boolean;
+  source: DataSource;
 }
 
-type RawTuple = [string, DataScope, Lane, WeightBand, DeliveryTeam, number, number];
-
-const RAW: RawTuple[] = [
-  ["2026-05", "SPB", "Cross metro", "<15kg", "AHM", 98, 86],
-  ["2026-05", "SPB", "Cross metro", "<15kg", "GHN", 53327, 47046],
-  ["2026-05", "SPB", "Cross metro", ">=15kg", "AHM", 9050, 8767],
-  ["2026-05", "SPB", "Cross metro", ">=15kg", "GHN", 75979, 62707],
-  ["2026-05", "SPB", "Cross metro *", "<15kg", "AHM", 7, 3],
-  ["2026-05", "SPB", "Cross metro *", "<15kg", "GHN", 17405, 16020],
-  ["2026-05", "SPB", "Cross metro *", ">=15kg", "AHM", 378, 373],
-  ["2026-05", "SPB", "Cross metro *", ">=15kg", "GHN", 30725, 26828],
-  ["2026-05", "SPB", "Cross region", "<15kg", "AHM", 30, 29],
-  ["2026-05", "SPB", "Cross region", "<15kg", "GHN", 192069, 169931],
-  ["2026-05", "SPB", "Cross region", ">=15kg", "AHM", 4024, 3851],
-  ["2026-05", "SPB", "Cross region", ">=15kg", "GHN", 317254, 269128],
-  ["2026-05", "SPB", "Intra city", "<15kg", "AHM", 77264, 71903],
-  ["2026-05", "SPB", "Intra city", "<15kg", "GHN", 113014, 104582],
-  ["2026-05", "SPB", "Intra city", ">=15kg", "AHM", 72673, 67344],
-  ["2026-05", "SPB", "Intra city", ">=15kg", "GHN", 127386, 114706],
-  ["2026-05", "SPB", "Intra region", "<15kg", "AHM", 136, 121],
-  ["2026-05", "SPB", "Intra region", "<15kg", "GHN", 213452, 194547],
-  ["2026-05", "SPB", "Intra region", ">=15kg", "AHM", 10127, 9831],
-  ["2026-05", "SPB", "Intra region", ">=15kg", "GHN", 398276, 354493],
-  ["2026-05", "SPB", "Không xác định", "<15kg", "AHM", 1, 1],
-  ["2026-05", "SPB", "Không xác định", "<15kg", "GHN", 909, 859],
-  ["2026-05", "SPB", "Không xác định", ">=15kg", "AHM", 7, 7],
-  ["2026-05", "SPB", "Không xác định", ">=15kg", "GHN", 1345, 1245],
-  ["2026-05", "SPE", "Cross metro", "<15kg", "AHM", 20, 20],
-  ["2026-05", "SPE", "Cross metro", "<15kg", "GHN", 219280, 190847],
-  ["2026-05", "SPE", "Cross metro", ">=15kg", "GHN", 15, 14],
-  ["2026-05", "SPE", "Cross metro *", "<15kg", "GHN", 63067, 57312],
-  ["2026-05", "SPE", "Cross metro *", ">=15kg", "GHN", 1, 1],
-  ["2026-05", "SPE", "Cross region", "<15kg", "AHM", 3, 3],
-  ["2026-05", "SPE", "Cross region", "<15kg", "GHN", 3093397, 2680165],
-  ["2026-05", "SPE", "Cross region", ">=15kg", "GHN", 269, 266],
-  ["2026-05", "SPE", "Intra city", "<15kg", "AHM", 6, 6],
-  ["2026-05", "SPE", "Intra city", "<15kg", "GHN", 201806, 187499],
-  ["2026-05", "SPE", "Intra city", ">=15kg", "GHN", 26, 26],
-  ["2026-05", "SPE", "Intra region", "<15kg", "AHM", 23, 22],
-  ["2026-05", "SPE", "Intra region", "<15kg", "GHN", 3011232, 2722654],
-  ["2026-05", "SPE", "Intra region", ">=15kg", "GHN", 296, 284],
-  ["2026-05", "SPE", "Không xác định", "<15kg", "GHN", 8563, 8180],
-  ["2026-06", "SPB", "Cross metro", "<15kg", "AHM", 139, 149],
-  ["2026-06", "SPB", "Cross metro", "<15kg", "GHN", 65135, 60854],
-  ["2026-06", "SPB", "Cross metro", ">=15kg", "AHM", 2848, 3035],
-  ["2026-06", "SPB", "Cross metro", ">=15kg", "GHN", 94726, 87663],
-  ["2026-06", "SPB", "Cross metro *", "<15kg", "AHM", 5, 9],
-  ["2026-06", "SPB", "Cross metro *", "<15kg", "GHN", 22597, 20855],
-  ["2026-06", "SPB", "Cross metro *", ">=15kg", "AHM", 144, 143],
-  ["2026-06", "SPB", "Cross metro *", ">=15kg", "GHN", 37652, 34872],
-  ["2026-06", "SPB", "Cross region", "<15kg", "AHM", 45, 44],
-  ["2026-06", "SPB", "Cross region", "<15kg", "GHN", 242790, 225699],
-  ["2026-06", "SPB", "Cross region", ">=15kg", "AHM", 3341, 3321],
-  ["2026-06", "SPB", "Cross region", ">=15kg", "GHN", 379373, 351993],
-  ["2026-06", "SPB", "Intra city", "<15kg", "AHM", 83093, 80078],
-  ["2026-06", "SPB", "Intra city", "<15kg", "GHN", 172177, 161303],
-  ["2026-06", "SPB", "Intra city", ">=15kg", "AHM", 59739, 56078],
-  ["2026-06", "SPB", "Intra city", ">=15kg", "GHN", 145894, 135863],
-  ["2026-06", "SPB", "Intra region", "<15kg", "AHM", 207, 216],
-  ["2026-06", "SPB", "Intra region", "<15kg", "GHN", 289267, 270126],
-  ["2026-06", "SPB", "Intra region", ">=15kg", "AHM", 7769, 7773],
-  ["2026-06", "SPB", "Intra region", ">=15kg", "GHN", 471592, 436123],
-  ["2026-06", "SPB", "Không xác định", "<15kg", "GHN", 79, 67],
-  ["2026-06", "SPB", "Không xác định", ">=15kg", "GHN", 109, 100],
-  ["2026-06", "SPE", "Cross metro", "<15kg", "AHM", 2, 2],
-  ["2026-06", "SPE", "Cross metro", "<15kg", "GHN", 236929, 228078],
-  ["2026-06", "SPE", "Cross metro", ">=15kg", "GHN", 20, 18],
-  ["2026-06", "SPE", "Cross metro *", "<15kg", "GHN", 68211, 64198],
-  ["2026-06", "SPE", "Cross metro *", ">=15kg", "GHN", 4, 4],
-  ["2026-06", "SPE", "Cross region", "<15kg", "AHM", 6, 6],
-  ["2026-06", "SPE", "Cross region", "<15kg", "GHN", 3847864, 3655460],
-  ["2026-06", "SPE", "Cross region", ">=15kg", "GHN", 111, 105],
-  ["2026-06", "SPE", "Intra city", "<15kg", "AHM", 1, 1],
-  ["2026-06", "SPE", "Intra city", "<15kg", "GHN", 223779, 214858],
-  ["2026-06", "SPE", "Intra city", ">=15kg", "GHN", 27, 27],
-  ["2026-06", "SPE", "Intra region", "<15kg", "AHM", 7, 8],
-  ["2026-06", "SPE", "Intra region", "<15kg", "GHN", 3733607, 3567941],
-  ["2026-06", "SPE", "Intra region", ">=15kg", "GHN", 109, 110],
-  ["2026-06", "SPE", "Không xác định", "<15kg", "GHN", 1397, 1321],
-  ["2026-07", "SPB", "Cross metro", "<15kg", "AHM", 17, 19],
-  ["2026-07", "SPB", "Cross metro", "<15kg", "GHN", 65858, 64073],
-  ["2026-07", "SPB", "Cross metro", ">=15kg", "AHM", 1318, 1405],
-  ["2026-07", "SPB", "Cross metro", ">=15kg", "GHN", 89874, 85853],
-  ["2026-07", "SPB", "Cross metro *", "<15kg", "GHN", 23668, 23031],
-  ["2026-07", "SPB", "Cross metro *", ">=15kg", "AHM", 103, 109],
-  ["2026-07", "SPB", "Cross metro *", ">=15kg", "GHN", 35799, 34165],
-  ["2026-07", "SPB", "Cross region", "<15kg", "AHM", 24, 26],
-  ["2026-07", "SPB", "Cross region", "<15kg", "GHN", 258665, 249294],
-  ["2026-07", "SPB", "Cross region", ">=15kg", "AHM", 2260, 2411],
-  ["2026-07", "SPB", "Cross region", ">=15kg", "GHN", 369374, 349869],
-  ["2026-07", "SPB", "Intra city", "<15kg", "AHM", 78324, 75388],
-  ["2026-07", "SPB", "Intra city", "<15kg", "GHN", 181729, 176325],
-  ["2026-07", "SPB", "Intra city", ">=15kg", "AHM", 58498, 54778],
-  ["2026-07", "SPB", "Intra city", ">=15kg", "GHN", 140461, 132917],
-  ["2026-07", "SPB", "Intra region", "<15kg", "AHM", 85, 91],
-  ["2026-07", "SPB", "Intra region", "<15kg", "GHN", 300531, 288596],
-  ["2026-07", "SPB", "Intra region", ">=15kg", "AHM", 4884, 5138],
-  ["2026-07", "SPB", "Intra region", ">=15kg", "GHN", 462271, 437324],
-  ["2026-07", "SPB", "Không xác định", "<15kg", "GHN", 66, 71],
-  ["2026-07", "SPB", "Không xác định", ">=15kg", "AHM", 2, 2],
-  ["2026-07", "SPB", "Không xác định", ">=15kg", "GHN", 70, 70],
-  ["2026-07", "SPE", "Cross metro", "<15kg", "GHN", 250662, 245736],
-  ["2026-07", "SPE", "Cross metro", ">=15kg", "GHN", 18, 19],
-  ["2026-07", "SPE", "Cross metro *", "<15kg", "GHN", 71144, 70087],
-  ["2026-07", "SPE", "Cross metro *", ">=15kg", "GHN", 3, 3],
-  ["2026-07", "SPE", "Cross region", "<15kg", "AHM", 39, 39],
-  ["2026-07", "SPE", "Cross region", "<15kg", "GHN", 3283047, 3313546],
-  ["2026-07", "SPE", "Cross region", ">=15kg", "GHN", 71, 67],
-  ["2026-07", "SPE", "Intra city", "<15kg", "AHM", 2, 2],
-  ["2026-07", "SPE", "Intra city", "<15kg", "GHN", 232886, 227638],
-  ["2026-07", "SPE", "Intra city", ">=15kg", "GHN", 19, 18],
-  ["2026-07", "SPE", "Intra region", "<15kg", "AHM", 49, 49],
-  ["2026-07", "SPE", "Intra region", "<15kg", "GHN", 3300485, 3282001],
-  ["2026-07", "SPE", "Intra region", ">=15kg", "GHN", 73, 74],
-  ["2026-07", "SPE", "Không xác định", "<15kg", "GHN", 1179, 1203],
-  ["2026-08", "SPB", "Cross metro", "<15kg", "AHM", 4, 4],
-  ["2026-08", "SPB", "Cross metro", "<15kg", "GHN", 93810, 88386],
-  ["2026-08", "SPB", "Cross metro", ">=15kg", "AHM", 838, 846],
-  ["2026-08", "SPB", "Cross metro", ">=15kg", "GHN", 106364, 98196],
-  ["2026-08", "SPB", "Cross metro *", "<15kg", "GHN", 33886, 32288],
-  ["2026-08", "SPB", "Cross metro *", ">=15kg", "AHM", 127, 127],
-  ["2026-08", "SPB", "Cross metro *", ">=15kg", "GHN", 42365, 39500],
-  ["2026-08", "SPB", "Cross region", "<15kg", "AHM", 10, 10],
-  ["2026-08", "SPB", "Cross region", "<15kg", "GHN", 357985, 334459],
-  ["2026-08", "SPB", "Cross region", ">=15kg", "AHM", 1703, 1741],
-  ["2026-08", "SPB", "Cross region", ">=15kg", "GHN", 416147, 383078],
-  ["2026-08", "SPB", "Intra city", "<15kg", "AHM", 96543, 88209],
-  ["2026-08", "SPB", "Intra city", "<15kg", "GHN", 198422, 187817],
-  ["2026-08", "SPB", "Intra city", ">=15kg", "AHM", 63393, 57211],
-  ["2026-08", "SPB", "Intra city", ">=15kg", "GHN", 171086, 157767],
-  ["2026-08", "SPB", "Intra region", "<15kg", "AHM", 44, 44],
-  ["2026-08", "SPB", "Intra region", "<15kg", "GHN", 403796, 378192],
-  ["2026-08", "SPB", "Intra region", ">=15kg", "AHM", 2950, 2984],
-  ["2026-08", "SPB", "Intra region", ">=15kg", "GHN", 519509, 480573],
-  ["2026-08", "SPB", "Không xác định", "<15kg", "GHN", 102, 93],
-  ["2026-08", "SPB", "Không xác định", ">=15kg", "GHN", 128, 120],
-  ["2026-08", "SPE", "Cross metro", "<15kg", "AHM", 6, 6],
-  ["2026-08", "SPE", "Cross metro", "<15kg", "GHN", 258038, 247742],
-  ["2026-08", "SPE", "Cross metro", ">=15kg", "GHN", 20, 22],
-  ["2026-08", "SPE", "Cross metro *", "<15kg", "GHN", 74014, 72129],
-  ["2026-08", "SPE", "Cross metro *", ">=15kg", "GHN", 6, 4],
-  ["2026-08", "SPE", "Cross region", "<15kg", "GHN", 3558229, 3375899],
-  ["2026-08", "SPE", "Cross region", ">=15kg", "GHN", 60, 71],
-  ["2026-08", "SPE", "Intra city", "<15kg", "AHM", 5, 5],
-  ["2026-08", "SPE", "Intra city", "<15kg", "GHN", 248980, 237034],
-  ["2026-08", "SPE", "Intra city", ">=15kg", "GHN", 18, 19],
-  ["2026-08", "SPE", "Intra region", "<15kg", "AHM", 1, 1],
-  ["2026-08", "SPE", "Intra region", "<15kg", "GHN", 3705288, 3497814],
-  ["2026-08", "SPE", "Intra region", ">=15kg", "GHN", 44, 51],
-  ["2026-08", "SPE", "Không xác định", "<15kg", "GHN", 1200, 1139],
-  ["2026-09", "SPB", "Cross metro", "<15kg", "GHN", 2885, 1550],
-  ["2026-09", "SPB", "Cross metro", ">=15kg", "GHN", 3376, 1777],
-  ["2026-09", "SPB", "Cross metro *", "<15kg", "GHN", 990, 436],
-  ["2026-09", "SPB", "Cross metro *", ">=15kg", "GHN", 1425, 511],
-  ["2026-09", "SPB", "Cross region", "<15kg", "GHN", 13477, 8539],
-  ["2026-09", "SPB", "Cross region", ">=15kg", "GHN", 16315, 8216],
-  ["2026-09", "SPB", "Intra city", "<15kg", "AHM", 1935, 589],
-  ["2026-09", "SPB", "Intra city", "<15kg", "GHN", 5466, 4623],
-  ["2026-09", "SPB", "Intra city", ">=15kg", "AHM", 1092, 301],
-  ["2026-09", "SPB", "Intra city", ">=15kg", "GHN", 5215, 3570],
-  ["2026-09", "SPB", "Intra region", "<15kg", "GHN", 14634, 9882],
-  ["2026-09", "SPB", "Intra region", ">=15kg", "GHN", 19644, 11365],
-  ["2026-09", "SPB", "Không xác định", "<15kg", "GHN", 1, 3],
-  ["2026-09", "SPB", "Không xác định", ">=15kg", "AHM", 1, 0],
-  ["2026-09", "SPB", "Không xác định", ">=15kg", "GHN", 4, 1],
-  ["2026-09", "SPE", "Cross metro", "<15kg", "GHN", 6752, 4304],
-  ["2026-09", "SPE", "Cross metro *", "<15kg", "GHN", 1899, 1075],
-  ["2026-09", "SPE", "Cross region", "<15kg", "GHN", 105986, 95706],
-  ["2026-09", "SPE", "Cross region", ">=15kg", "GHN", 1, 0],
-  ["2026-09", "SPE", "Intra city", "<15kg", "GHN", 3284, 7929],
-  ["2026-09", "SPE", "Intra region", "<15kg", "GHN", 108424, 119216],
-  ["2026-09", "SPE", "Intra region", ">=15kg", "GHN", 0, 2],
-  ["2026-09", "SPE", "Không xác định", "<15kg", "GHN", 26, 39],
-];
-
-export const BIZ_ROWS: BizRow[] = RAW.map(
-  ([month, scope, lane, weight, team, created, gtc]) => ({
-    month, scope, lane, weight, team, created, gtc,
-  }),
-);
-
-/** Các tháng có mặt trong dữ liệu, tăng dần. */
-export const BIZ_MONTHS: string[] = [
-  ...new Set(BIZ_ROWS.map((r) => r.month)),
-].sort();
+export async function getBizDataset(): Promise<BizDataset> {
+  const { vol, source } = await getDatasets();
+  return {
+    rows: vol.rows,
+    months: [...new Set(vol.rows.map((r) => r.month))].sort(),
+    hasTeam: vol.hasTeam,
+    source,
+  };
+}

@@ -1,8 +1,7 @@
 import "server-only";
 
-import { BIZ_MONTHS, BIZ_ROWS, type BizRow } from "./bizData";
+import type { BizDataset, BizRow } from "./bizData";
 import {
-  BIZ_DATA_THROUGH,
   LANE_ORDER,
   TEAM_ORDER,
   WEIGHT_ORDER,
@@ -47,21 +46,22 @@ function ratio(numerator: number, denominator: number) {
 }
 
 /** Chuỗi sản lượng theo tháng của một scope, tăng dần theo thời gian. */
-export function monthlySeries(scope: DataScope): MonthPoint[] {
-  return BIZ_MONTHS.map((month) => {
-    const rows = BIZ_ROWS.filter((r) => r.scope === scope && r.month === month);
+export function monthlySeries(ds: BizDataset, scope: DataScope): MonthPoint[] {
+  return ds.months.map((month) => {
+    const rows = ds.rows.filter((r) => r.scope === scope && r.month === month);
     return { month, created: sum(rows, "created"), gtc: sum(rows, "gtc") };
   });
 }
 
 function breakdown<T extends string>(
+  ds: BizDataset,
   scope: DataScope,
   month: string,
   prevMonth: string | undefined,
   keys: readonly T[],
   pick: (row: BizRow) => T,
 ): BreakdownRow<T>[] {
-  const monthRows = BIZ_ROWS.filter(
+  const monthRows = ds.rows.filter(
     (r) => r.scope === scope && r.month === month,
   );
   const totalCreated = sum(monthRows, "created");
@@ -74,7 +74,7 @@ function breakdown<T extends string>(
     let momCreated: number | null = null;
     if (prevMonth) {
       const prevCreated = sum(
-        BIZ_ROWS.filter(
+        ds.rows.filter(
           (r) =>
             r.scope === scope && r.month === prevMonth && pick(r) === key,
         ),
@@ -95,19 +95,21 @@ function breakdown<T extends string>(
 }
 
 export function laneBreakdown(
+  ds: BizDataset,
   scope: DataScope,
   month: string,
   prevMonth?: string,
 ): BreakdownRow<Lane>[] {
-  return breakdown(scope, month, prevMonth, LANE_ORDER, (r) => r.lane);
+  return breakdown(ds, scope, month, prevMonth, LANE_ORDER, (r) => r.lane);
 }
 
 export function weightBreakdown(
+  ds: BizDataset,
   scope: DataScope,
   month: string,
   prevMonth?: string,
 ): BreakdownRow<WeightBand>[] {
-  return breakdown(scope, month, prevMonth, WEIGHT_ORDER, (r) => r.weight);
+  return breakdown(ds, scope, month, prevMonth, WEIGHT_ORDER, (r) => r.weight);
 }
 
 export interface BizSummary {
@@ -122,8 +124,8 @@ export interface BizSummary {
   ytdCreated: number;
 }
 
-export function bizSummary(scope: DataScope): BizSummary {
-  const series = monthlySeries(scope);
+export function bizSummary(ds: BizDataset, scope: DataScope): BizSummary {
+  const series = monthlySeries(ds, scope);
   const latest = series[series.length - 1];
   const prev = series[series.length - 2];
 
@@ -151,10 +153,10 @@ export interface BandPoint {
   gtc: number;
 }
 
-export function monthlyByBand(scope: DataScope): BandPoint[] {
-  return BIZ_MONTHS.map((month) => {
+export function monthlyByBand(ds: BizDataset, scope: DataScope): BandPoint[] {
+  return ds.months.map((month) => {
     const bands = WEIGHT_ORDER.map((band) => {
-      const rows = BIZ_ROWS.filter(
+      const rows = ds.rows.filter(
         (r) => r.scope === scope && r.month === month && r.weight === band,
       );
       return { band, created: sum(rows, "created"), gtc: sum(rows, "gtc") };
@@ -181,6 +183,7 @@ function ratioOf(actual: number, target: number | undefined) {
  * đầu, chẳng nói lên điều gì về hiệu suất.
  */
 export const fcCompletion = (
+  ds: BizDataset,
   scope: DataScope,
   month: string,
   created: number,
@@ -189,7 +192,7 @@ export const fcCompletion = (
   ratioOf(
     created,
     month === currentMonth()
-      ? fcThrough(scope, month, BIZ_DATA_THROUGH, band)
+      ? fcThrough(scope, month, ds.source.dataThrough, band)
       : fcFor(scope, month, band),
   );
 
@@ -231,8 +234,8 @@ export interface ScopeProgress {
  * xuống một cách giả tạo, và mức bóp méo càng lớn khi tháng mới bắt đầu.
  * Tháng đang chạy được nhìn riêng ở ô MTD.
  */
-export function scopeProgress(scope: DataScope): ScopeProgress {
-  const series = monthlySeries(scope);
+export function scopeProgress(ds: BizDataset, scope: DataScope): ScopeProgress {
+  const series = monthlySeries(ds, scope);
   const latest = series[series.length - 1];
   const running = currentMonth();
   const isPartial = latest.month === running;
@@ -255,7 +258,7 @@ export function scopeProgress(scope: DataScope): ScopeProgress {
       gtc: ytdGtc,
       target: ytdTarget,
       completion: ytdTarget === 0 ? 0 : ytdGtc / ytdTarget,
-      periodLabel: `${first}–${last}/2026`,
+      periodLabel: `${first}–${last}/${ytdSource[0].month.slice(0, 4)}`,
     },
     mtd: {
       gtc: latest.gtc,
@@ -276,9 +279,9 @@ export interface LaneShareRow {
 }
 
 /** Bảng tỷ trọng lane theo tháng: 4 cột tỷ trọng + 1 cột tổng tuyệt đối. */
-export function laneShareByMonth(scope: DataScope): LaneShareRow[] {
-  return BIZ_MONTHS.map((month) => {
-    const rows = BIZ_ROWS.filter((r) => r.scope === scope && r.month === month);
+export function laneShareByMonth(ds: BizDataset, scope: DataScope): LaneShareRow[] {
+  return ds.months.map((month) => {
+    const rows = ds.rows.filter((r) => r.scope === scope && r.month === month);
     const totalCreated = sum(rows, "created");
     return {
       month,
@@ -303,8 +306,8 @@ export interface BandShareRow {
 }
 
 /** Bảng sản lượng + tỷ trọng theo nhóm trọng lượng, mỗi hàng là một tháng. */
-export function bandShareByMonth(scope: DataScope): BandShareRow[] {
-  return monthlyByBand(scope).map((point) => ({
+export function bandShareByMonth(ds: BizDataset, scope: DataScope): BandShareRow[] {
+  return monthlyByBand(ds, scope).map((point) => ({
     month: point.month,
     cells: point.bands.map((b) => ({
       band: b.band,
@@ -325,9 +328,12 @@ export interface TeamShareRow {
  * Cùng khuôn với bảng theo nhóm trọng lượng để đọc song song được: cột tuyệt
  * đối đứng cạnh cột tỷ trọng của chính đội đó.
  */
-export function teamShareByMonth(scope: DataScope): TeamShareRow[] {
-  return BIZ_MONTHS.map((month) => {
-    const monthRows = BIZ_ROWS.filter(
+export function teamShareByMonth(ds: BizDataset, scope: DataScope): TeamShareRow[] | null {
+  // Nguồn không bóc theo đội thì trả null — giao diện báo thiếu nguồn, không
+  // vẽ bảng toàn 0 rồi để người đọc tưởng AHM không giao đơn nào.
+  if (!ds.hasTeam) return null;
+  return ds.months.map((month) => {
+    const monthRows = ds.rows.filter(
       (r) => r.scope === scope && r.month === month,
     );
     const total = sum(monthRows, "created");

@@ -164,21 +164,80 @@ nonce trong HTML, và build phải cho ra `ƒ` chứ không phải `○`:
 npm run build 2>&1 | grep -E "^[┌├└]"
 ```
 
-## Nguồn dữ liệu đã đổi (02/09/2026)
+## Dữ liệu từ Google Sheet — đọc trực tiếp, có bản chụp dự phòng
 
-Sheet `tower control raw` đổi tên tab và thêm cột:
+Tab Tình hình kinh doanh và Campaign đọc sheet [`tower control raw`](https://docs.google.com/spreadsheets/d/1WI5CrcFrTgDR4FNS8Un9RR-oHEvkdJWCj8OUTc2BFtk/edit)
+(tab `vol`, `DD`, `DD OPR`) qua **Sheets API bằng service account**, làm mới mỗi
+giờ. Không có `GOOGLE_SA_KEY` thì rơi về **bản chụp** trong `lib/snapshot/*`.
+Giao diện luôn ghi rõ đang xem live hay bản chụp, chốt tới ngày nào.
 
-| Trước | Bây giờ | Thay đổi |
+```
+lib/sheetSource.ts   đọc sheet (JWT service account → Sheets API), cache 1h, fallback
+lib/sheetParse.ts    bóc dòng thô → cấu trúc app. MỘT đường code cho cả live lẫn chụp
+lib/snapshot/*.ts    bản chụp, sinh bằng scripts/gen-snapshot.ts — KHÔNG sửa tay
+lib/bizData.ts       dataset tab Tình hình kinh doanh
+lib/campaignData.ts  dataset tab Campaign (+ độ chín của kỳ)
+```
+
+Sheet **không** publish to web: publish là công khai, ai có link đọc được toàn bộ
+sản lượng Shopee. Service account đọc bằng quyền riêng, số chỉ ra khỏi server
+qua `/api/*` đã kiểm tra đăng nhập.
+
+### Bật đọc trực tiếp
+
+1. Google Cloud Console → *IAM & Admin › Service Accounts* → Create → *Keys › Add
+   key (JSON)*. Không cần cấp role nào.
+2. Share sheet cho email của service account (`…@…iam.gserviceaccount.com`),
+   quyền **Viewer**.
+3. Vercel → Environment Variables → `GOOGLE_SA_KEY` = nội dung file JSON. Dán
+   bản base64 an toàn hơn (`private_key` có xuống dòng, dán thẳng vào Vercel hay
+   hỏng): `base64 -i key.json | tr -d '\n'`. Redeploy.
+
+Lỗi hay gặp: `Sheets API 403` = chưa share sheet cho email service account.
+Khi live lỗi, app **không trắng trang** — rơi về bản chụp và hiện cảnh báo vàng
+kèm lý do, để người xem biết số đang cũ.
+
+### Cập nhật bản chụp
+
+Bản chụp chỉ là lưới an toàn; nếu live đã chạy thì không cần đụng. Khi cần:
+
+```bash
+# 1. Tải sheet về xlsx, dump 3 tab ra JSON { vol, dd, opr } (ma trận ô, dòng đầu là tiêu đề)
+# 2. Sinh lại, ngày = ngày lấy dữ liệu
+npx tsx --conditions=react-server scripts/gen-snapshot.ts workbook.json 2026-09-11
+```
+
+Bản chụp đi qua đúng `sheetParse.ts` như đường live nên không thể lệch cách hiểu
+cột. Tab `DD` (~20k dòng) được gom trước khi ghi; `vol` và `DD OPR` giữ thô.
+
+### Ngày chốt dữ liệu suy từ ngày đọc
+
+Sheet chạy tự động mỗi sáng, nạp số của **ngày hôm trước**. Nên `dataThrough` =
+ngày đọc − 1 (giờ Việt Nam), không khai tay. Bản chụp thì lấy ngày sinh − 1.
+Mức hoàn thành FC của tháng đang chạy dựa trực tiếp vào con số này.
+
+### Cấu trúc sheet mà parser tin vào
+
+Cột tra **theo tên**, không theo vị trí — sheet đã từng bỏ hẳn `delivery_team`
+khỏi `vol` mà không báo. Thiếu cột bắt buộc thì ném lỗi (→ rơi về bản chụp) chứ
+không lặng lẽ ra 0.
+
+| Tab | Cột bắt buộc | Ghi chú |
 | --- | --- | --- |
-| `raw tab 1` | `vol` | Thêm `delivery_team`; phủ **T5–T9** thay vì T1–T8 |
-| `raw tab 2` | `DD` | Thêm `delivery_team` |
+| `vol` | `timeview clientname lane weight_range vol_created vol_gtc` | `delivery_team` tuỳ chọn — không có thì bảng đội giao báo thiếu nguồn |
+| `DD` | `period_label type day_offset clientname fromprovince_new toprovince_new delivery_team total_orders_in_sample ontime_deli_odr_count` | `day_offset` baseline dạng `D0 (avg 7d)` = trung bình ngày → mới có cột "gấp ngày thường" |
+| `DD OPR` | như `DD` nhưng không có `toprovince_new`, đếm bằng `ontime_opr_count` | Mẫu khác tab `DD`, giữ riêng không trộn |
 
-Hai điểm trong tab `vol` dễ xử lý sai:
+Hai điểm trong `vol` dễ xử lý sai:
 
-- **`Cross metro *` là lane riêng**, tồn tại song song với `Cross metro`
-  (525.625 đơn). Giữ tách, không gộp.
-- **37 dòng thiếu lane** (~0,04%) gom vào `Không xác định` thay vì bỏ, để tổng
-  vẫn khớp nguồn.
+- **`Cross metro *` là lane riêng**, tồn tại song song với `Cross metro`. Giữ tách.
+- **Dòng thiếu lane** gom vào `Không xác định` thay vì bỏ, để tổng vẫn khớp nguồn.
+
+### Kỳ campaign "chưa chốt"
+
+ODR/OPR của kỳ vừa diễn ra thấp giả tạo: đơn còn đang đi đường bị đếm là chưa
+đúng hạn. Kỳ chưa đủ `SETTLE_DAYS` (5) ngày sau D+1 tính tới ngày chốt được gắn
+nhãn "chưa chốt", để trống ODR/OPR trên bảng và đường ODR. Sản lượng vẫn hiện.
 
 ### YTD loại tháng đang chạy
 
@@ -241,27 +300,15 @@ ngày trước ngày lấy snapshot. Đổi ngày snapshot là ngày chốt tự
 
 YTD vẫn chỉ cộng các tháng đã đủ — xem `scopeProgress`.
 
-## Dữ liệu từ Google Sheet
-
-Hai tab đã dựng đọc từ sheet [`tower control raw`](https://docs.google.com/spreadsheets/d/1WI5CrcFrTgDR4FNS8Un9RR-oHEvkdJWCj8OUTc2BFtk/edit).
-Dữ liệu để ở dạng **snapshot tĩnh** trong `lib/bizData.ts` và `lib/campaignData.ts`,
-**không fetch lúc chạy**: sheet không công khai (truy cập ẩn danh trả `401`), nên
-fetch phía trình duyệt sẽ dính đúng lỗi `403` mà tab Sức khoẻ vận hành đang gặp.
-
-Cách cập nhật khi có số mới: xuất tab tương ứng ra CSV rồi sinh lại file dữ liệu.
-`raw tab 2` có ~19.4k dòng ma trận tỉnh-đi × tỉnh-đến, nên `campaignData.ts` chỉ
-giữ số **đã tổng hợp** ở mức kỳ campaign và mức tỉnh, không giữ dữ liệu thô.
-
 ### Những chỗ dễ đọc sai, đã xử lý sẵn trong giao diện
 
-- **Tháng cuối chưa đủ tháng.** Snapshot chốt 19/08 nên T8/2026 khuyết ngày; chỉ
-  số MoM đang so tháng khuyết với tháng đủ. Giao diện ghi rõ để không ai đọc
-  `-28%` thành sụt giảm thật.
-- **Baseline chỉ có ở D0.** Trong `raw tab 2`, dữ liệu ngày thường không có D+1,
-  nên so sánh campaign với ngày thường bắt buộc là CP D0 ↔ baseline D0.
-- **ODR tính theo trọng số đơn**, không lấy trung bình cộng ODR các tỉnh.
-- **Bảng xếp hạng tỉnh có ngưỡng mẫu tối thiểu 300 đơn** — dưới mức đó vài đơn
-  cũng đủ đẩy ODR về 0% hoặc 100% và chiếm hết top.
+- **Tháng cuối chưa đủ tháng.** Giao diện ghi ngày chốt để không ai đọc cột thấp
+  thành sụt giảm.
+- **Baseline chỉ có ở D0.** So sánh campaign với ngày thường bắt buộc là CP D0 ↔
+  baseline D0.
+- **ODR/OPR tính theo trọng số đơn**, không lấy trung bình cộng các tỉnh.
+- **Top tỉnh xếp theo sản lượng**, không theo ODR — tỉnh vài đơn không lọt top
+  nhờ 100% may mắn.
 
 ## Tab "Sức khoẻ vận hành" — nhúng app kas-shopee-performance
 
@@ -400,7 +447,8 @@ components/
   Toggle.tsx            toggle SPB/SPE và Theo ngày/Theo tháng
   OpsHealthIframe.tsx   nhúng app báo cáo KAS
   Placeholder.tsx       khung placeholder cho các tab chưa làm
-lib/                    cấu hình tab và nội dung placeholder
+lib/                    dữ liệu (sheetSource/sheetParse/snapshot), metrics, view model, access
+scripts/gen-snapshot.ts sinh lại bản chụp từ dump JSON của sheet
 types/                  khai báo type cho iframe-resizer 4.x
 ```
 

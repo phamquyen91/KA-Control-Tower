@@ -136,51 +136,6 @@ export const aopFor = (scope: DataScope, month: string, band?: WeightBand) =>
   band ? pick(AOP_GTTC, scope, month, band) : total(AOP_GTTC, scope, month);
 
 // ---------------------------------------------------------------------------
-// FC cho NGÀY campaign, lấy đúng cột ngày tương ứng trong chính các file trên.
-// CP 6.6 = 06/06 và 07/06, CP 7.7 = 07/07 và 08/07, CP 8.8 = 08/08 và 09/08.
-// Bulky cộng hai block weight lại thành tổng.
-// ---------------------------------------------------------------------------
-
-export interface CampaignFcRow {
-  campaign: string;
-  scope: DataScope;
-  day: "D0" | "D+1";
-  value: number;
-}
-
-type CampaignFcTuple = [string, DataScope, "D0" | "D+1", number];
-
-const CAMPAIGN_FC_RAW: CampaignFcTuple[] = [
-  ["CP 6.6", "SPB", "D+1", 90836],
-  ["CP 6.6", "SPB", "D0", 188870],
-  ["CP 6.6", "SPE", "D+1", 255086],
-  ["CP 6.6", "SPE", "D0", 339634],
-  ["CP 7.7", "SPB", "D+1", 159709],
-  ["CP 7.7", "SPB", "D0", 154180],
-  ["CP 7.7", "SPE", "D+1", 310142],
-  ["CP 7.7", "SPE", "D0", 291587],
-  ["CP 8.8", "SPB", "D+1", 102637],
-  ["CP 8.8", "SPB", "D0", 208893],
-  ["CP 8.8", "SPE", "D+1", 209007],
-  ["CP 8.8", "SPE", "D0", 282410],
-];
-
-export const CAMPAIGN_FC: CampaignFcRow[] = CAMPAIGN_FC_RAW.map(
-  ([campaign, scope, day, value]) => ({ campaign, scope, day, value }),
-);
-
-/** FC của một ngày campaign; undefined khi kỳ đó chưa có file forecast. */
-export function campaignFcFor(
-  scope: DataScope,
-  campaign: string,
-  day: "D0" | "D+1",
-): number | undefined {
-  return CAMPAIGN_FC.find(
-    (r) => r.scope === scope && r.campaign === campaign && r.day === day,
-  )?.value;
-}
-
-// ---------------------------------------------------------------------------
 // FC theo TỪNG NGÀY. Dùng để so sản lượng của tháng đang chạy với đúng phần FC
 // của những ngày đã có số liệu, thay vì so với mục tiêu trọn tháng.
 // ---------------------------------------------------------------------------
@@ -1038,4 +993,19 @@ export function fcThrough(
   return rows.length
     ? rows.reduce((acc, r) => acc + r.value, 0)
     : undefined;
+}
+
+/**
+ * FC của MỘT ngày (tổng các band). Dùng cho ngày campaign: CP 9.9 → 09/09 (D)
+ * và 10/09 (D+1). undefined khi ngày đó không có trong file forecast — giao
+ * diện bỏ trống chứ không lấy tháng chia đều.
+ */
+export function dailyFcFor(scope: DataScope, date: string): number | undefined {
+  const rows = DAILY_FC.filter((r) => r.scope === scope && r.date === date);
+  if (rows.length === 0) return undefined;
+  // Có dòng "total" thì lấy nó; không thì cộng các band.
+  const total = rows.find((r) => r.band === "total");
+  return total
+    ? total.value
+    : rows.reduce((acc, r) => acc + r.value, 0);
 }

@@ -136,6 +136,22 @@
   background: var(--danger-tint);
 }
 
+/* Nhãn "chưa chốt" cạnh tên kỳ vừa diễn ra — vàng cảnh báo, không phải đỏ:
+   không phải lỗi, chỉ là chưa tới lúc đọc. */
+.badgeSettling {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #8a6100;
+  background: var(--warning-tint);
+  vertical-align: middle;
+}
+
 .sparkWrap {
   position: relative;
 }

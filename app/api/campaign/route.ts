@@ -32,7 +32,7 @@ export async function GET() {
     );
   }
 
-  return NextResponse.json(buildCampaignPayload(), {
+  return NextResponse.json(await buildCampaignPayload(), {
     headers: { "Cache-Control": "no-store, private" },
   });
 }

@@ -1,15 +1,14 @@
 import "server-only";
 
 import {
-  CAMPAIGNS,
-  CAMPAIGN_PROVINCES,
-  CAMPAIGN_TEAMS,
-  CAMPAIGN_TOTALS,
+  campaignDays,
+  isSettled,
+  type CampaignDataset,
   type DayOffset,
   type DeliveryTeam,
   type Direction,
 } from "./campaignData";
-import { campaignFcFor } from "./targetData";
+import { dailyFcFor } from "./targetData";
 import type { DataScope } from "./tabs";
 
 export interface OdrCell {
@@ -31,12 +30,13 @@ function completion(actual: number, target: number | undefined) {
 }
 
 function lookup(
+  ds: CampaignDataset,
   scope: DataScope,
   campaign: string,
   type: "CP" | "baseline",
   day: DayOffset,
 ): OdrCell {
-  const row = CAMPAIGN_TOTALS.find(
+  const row = ds.totals.find(
     (r) =>
       r.scope === scope &&
       r.campaign === campaign &&
@@ -54,18 +54,51 @@ export interface CampaignRow {
   baselineD0: OdrCell;
   /** Chênh lệch ODR theo điểm phần trăm: CP D0 − baseline D0. */
   deltaD0Pp: number;
-  /** Sản lượng ngày D gấp bao nhiêu lần ngày thường; null khi không có baseline. */
+  /**
+   * Sản lượng ngày D gấp bao nhiêu lần ngày thường. Chỉ có khi baseline trong
+   * nguồn là trung bình MỖI NGÀY; baseline gộp nhiều ngày thì null — chia ra
+   * dưới 1 lần sẽ bị đọc thành campaign thấp hơn ngày thường.
+   */
   liftVsBaseline: number | null;
-  /** Mức hoàn thành so FC của từng ngày; null khi kỳ đó chưa có file forecast. */
+  /** OPR ngày D (tỷ lệ lấy đúng hạn), gộp trọng số toàn scope; null khi tab OPR không có kỳ này. */
+  oprD0: OdrCell | null;
+  /** Mức hoàn thành so FC của từng ngày; null khi ngày đó không có trong file forecast. */
   fcD0: number | null;
   fcD1: number | null;
+  /** Ngày D theo lịch; undefined khi nhãn kỳ không đọc ra ngày. */
+  date: string | undefined;
+  /** false = kỳ vừa diễn ra, đơn chưa giao xong, ODR/OPR chưa đáng tin. */
+  settled: boolean;
 }
 
-export function campaignRows(scope: DataScope): CampaignRow[] {
-  return CAMPAIGNS.map((campaign) => {
-    const cpD0 = lookup(scope, campaign, "CP", "D0");
-    const cpD1 = lookup(scope, campaign, "CP", "D+1");
-    const baselineD0 = lookup(scope, campaign, "baseline", "D0");
+function oprCell(
+  ds: CampaignDataset,
+  scope: DataScope,
+  campaign: string,
+  day: DayOffset,
+  filter: (r: CampaignDataset["opr"][number]) => boolean = () => true,
+): OdrCell | null {
+  const rows = ds.opr.filter(
+    (r) =>
+      r.scope === scope &&
+      r.campaign === campaign &&
+      r.type === "CP" &&
+      r.day === day &&
+      filter(r),
+  );
+  if (rows.length === 0) return null;
+  return cell(
+    rows.reduce((a, r) => a + r.orders, 0),
+    rows.reduce((a, r) => a + r.ontime, 0),
+  );
+}
+
+export function campaignRows(ds: CampaignDataset, scope: DataScope): CampaignRow[] {
+  return ds.campaigns.map((campaign) => {
+    const cpD0 = lookup(ds, scope, campaign, "CP", "D0");
+    const cpD1 = lookup(ds, scope, campaign, "CP", "D+1");
+    const baselineD0 = lookup(ds, scope, campaign, "baseline", "D0");
+    const days = campaignDays(ds, campaign);
     return {
       campaign,
       cpD0,
@@ -73,15 +106,20 @@ export function campaignRows(scope: DataScope): CampaignRow[] {
       baselineD0,
       deltaD0Pp: (cpD0.odr - baselineD0.odr) * 100,
       liftVsBaseline:
-        baselineD0.orders === 0 ? null : cpD0.orders / baselineD0.orders,
-      fcD0: completion(cpD0.orders, campaignFcFor(scope, campaign, "D0")),
-      fcD1: completion(cpD1.orders, campaignFcFor(scope, campaign, "D+1")),
+        ds.baselinePerDay && baselineD0.orders > 0
+          ? cpD0.orders / baselineD0.orders
+          : null,
+      oprD0: oprCell(ds, scope, campaign, "D0"),
+      fcD0: completion(cpD0.orders, days && dailyFcFor(scope, days.d0)),
+      fcD1: completion(cpD1.orders, days && dailyFcFor(scope, days.d1)),
+      date: days?.d0,
+      settled: isSettled(ds, campaign),
     };
   });
 }
 
-export function latestCampaign(): string {
-  return CAMPAIGNS[CAMPAIGNS.length - 1];
+export function latestCampaign(ds: CampaignDataset): string {
+  return ds.campaigns[ds.campaigns.length - 1] ?? "";
 }
 
 export interface TeamRow {
@@ -92,9 +130,9 @@ export interface TeamRow {
 const TEAM_ORDER: DeliveryTeam[] = ["AHM", "GHN"];
 
 /** Sản lượng ngày D theo đội giao, kèm tỷ trọng trong từng kỳ campaign. */
-export function teamRows(scope: DataScope): TeamRow[] {
-  return CAMPAIGNS.map((campaign) => {
-    const rows = CAMPAIGN_TEAMS.filter(
+export function teamRows(ds: CampaignDataset, scope: DataScope): TeamRow[] {
+  return ds.campaigns.map((campaign) => {
+    const rows = ds.teams.filter(
       (r) =>
         r.scope === scope &&
         r.campaign === campaign &&
@@ -118,6 +156,13 @@ export interface ProvinceRow extends OdrCell {
   province: string;
   /** Bóc tách theo đội giao; tỉnh nào đội đó không chạy thì các số bằng 0. */
   byTeam: Record<DeliveryTeam, OdrCell>;
+  /**
+   * OPR (chiều lấy) từ tab `DD OPR` — chỉ có với direction "from". Mẫu của
+   * tab OPR khác mẫu tab DD nên giữ riêng, không trộn vào orders/ontime ở trên.
+   * null khi tab OPR không có tỉnh/đội đó.
+   */
+  opr: OdrCell | null;
+  oprByTeam: Record<DeliveryTeam, OdrCell | null>;
 }
 
 /**
@@ -127,12 +172,13 @@ export interface ProvinceRow extends OdrCell {
  * rơi xuống cuối, không thể lọt top nhờ ODR 100% may mắn.
  */
 export function topProvincesByVolume(
+  ds: CampaignDataset,
   scope: DataScope,
   campaign: string,
   direction: Direction,
   limit: number,
 ): ProvinceRow[] {
-  const rows = CAMPAIGN_PROVINCES.filter(
+  const rows = ds.provinces.filter(
     (r) =>
       r.scope === scope &&
       r.campaign === campaign &&
@@ -162,10 +208,22 @@ export function topProvincesByVolume(
           picked.reduce((a, r) => a + r.ontime, 0),
         );
       };
+      const opr = (team?: DeliveryTeam) =>
+        direction === "from"
+          ? oprCell(
+              ds,
+              scope,
+              campaign,
+              "D0",
+              (r) => r.province === province && (!team || r.team === team),
+            )
+          : null;
       return {
         province,
         ...cell(orders, ontime),
         byTeam: { AHM: teamCell("AHM"), GHN: teamCell("GHN") },
+        opr: opr(),
+        oprByTeam: { AHM: opr("AHM"), GHN: opr("GHN") },
       };
     })
     .sort((a, b) => b.orders - a.orders)

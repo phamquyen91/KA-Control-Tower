@@ -33,7 +33,7 @@ export async function GET() {
     );
   }
 
-  return NextResponse.json(buildBizPayload(), {
+  return NextResponse.json(await buildBizPayload(), {
     headers: {
       // Dữ liệu theo từng người dùng — không để CDN hay trình duyệt cache lại.
       "Cache-Control": "no-store, private",
