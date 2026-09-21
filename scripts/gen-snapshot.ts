@@ -60,18 +60,48 @@ ${rowsLiteral(vol)}
 const dd = trim(wb.dd);
 const agg = aggregateDd(dd);
 const opr = trim(wb.opr);
+// Ghi dạng tuple thay vì object để file nhẹ đi một nửa — 4.000+ dòng tỉnh × đội.
+const totalT = agg.totals.map((r) => [r.campaign, r.type, r.day, r.scope, r.orders, r.ontime]);
+const teamT = agg.teams.map((r) => [r.campaign, r.type, r.day, r.scope, r.team, r.orders, r.ontime]);
+const provT = agg.provinces.map((r) => [
+  r.campaign, r.type, r.day, r.scope, r.direction, r.province, r.team, r.orders, r.ontime,
+]);
+const tuples = (rows: unknown[][]) => rows.map((r) => `  ${JSON.stringify(r)},`).join("\n");
 writeFileSync(
   "lib/snapshot/campaign.ts",
   `import "server-only";
 
-import type { CampaignAgg, SheetRows } from "../sheetParse";
+import type {
+  CampaignAgg,
+  CampaignProvince,
+  CampaignTeam,
+  CampaignTotal,
+  SheetRows,
+} from "../sheetParse";
 
 ${banner("DD", dd.length - 1)}
 // Đã gom bằng aggregateDd(): ${agg.totals.length} tổng, ${agg.teams.length} theo đội,
-// ${agg.provinces.length} theo tỉnh × đội. baselinePerDay=${agg.baselinePerDay}.
-export const CAMPAIGN_SNAPSHOT: CampaignAgg = ${JSON.stringify(agg, null, 0)
-    .replace(/\{"campaign"/g, '\n  {"campaign"')
-    .replace(/\]\}$/, "]\n}")};
+// ${agg.provinces.length} theo tỉnh × đội. Ghi dạng tuple cho nhẹ, dựng lại object ở cuối file.
+const TOTALS: [string, CampaignTotal["type"], CampaignTotal["day"], CampaignTotal["scope"], number, number][] = [
+${tuples(totalT)}
+];
+
+const TEAMS: [string, CampaignTeam["type"], CampaignTeam["day"], CampaignTeam["scope"], CampaignTeam["team"], number, number][] = [
+${tuples(teamT)}
+];
+
+const PROVINCES: [string, CampaignProvince["type"], CampaignProvince["day"], CampaignProvince["scope"], CampaignProvince["direction"], string, CampaignProvince["team"], number, number][] = [
+${tuples(provT)}
+];
+
+export const CAMPAIGN_SNAPSHOT: CampaignAgg = {
+  totals: TOTALS.map(([campaign, type, day, scope, orders, ontime]) => ({ campaign, type, day, scope, orders, ontime })),
+  teams: TEAMS.map(([campaign, type, day, scope, team, orders, ontime]) => ({ campaign, type, day, scope, team, orders, ontime })),
+  provinces: PROVINCES.map(([campaign, type, day, scope, direction, province, team, orders, ontime]) => ({
+    campaign, type, day, scope, direction, province, team, orders, ontime,
+  })),
+  baselinePerDay: ${agg.baselinePerDay},
+};
 
 ${banner("DD OPR", opr.length - 1)}
 export const OPR_SNAPSHOT: SheetRows = [

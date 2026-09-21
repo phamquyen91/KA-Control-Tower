@@ -152,9 +152,11 @@ async function fetchTabs(sa: ServiceAccountKey): Promise<Record<keyof typeof TAB
     `https://sheets.googleapis.com/v4/spreadsheets/${BIZ_SOURCE_SHEET_ID}/values:batchGet`,
   );
   for (const tab of Object.values(TABS)) url.searchParams.append("ranges", tab);
-  // UNFORMATTED để số về là số, không phải "1,234"; ngày về là serial — parser xử lý.
+  // UNFORMATTED để số về là số, không phải "1,234". Ngày lấy dạng SERIAL chứ
+  // không lấy chuỗi đã định dạng: chuỗi phụ thuộc locale của sheet ("1/9/2026"
+  // là 1 tháng 9 hay 9 tháng 1?), serial thì không — parser đổi serial ra tháng.
   url.searchParams.set("valueRenderOption", "UNFORMATTED_VALUE");
-  url.searchParams.set("dateTimeRenderOption", "FORMATTED_STRING");
+  url.searchParams.set("dateTimeRenderOption", "SERIAL_NUMBER");
 
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },

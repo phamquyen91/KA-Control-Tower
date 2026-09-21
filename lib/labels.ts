@@ -3,8 +3,12 @@ import type { DataScope } from "./tabs";
 // Nhãn và kiểu dữ liệu — không chứa số liệu nên client import được thoải mái.
 // Số liệu thật nằm ở `bizData.ts` / `targetData.ts`, cả hai đều server-only.
 
-export const BIZ_SOURCE_SHEET_ID = "1WI5CrcFrTgDR4FNS8Un9RR-oHEvkdJWCj8OUTc2BFtk";
-export const BIZ_SOURCE_GID = "1213160480";
+// Sheet "KA control tower dest" — bản đích do tài khoản kasghn2026@gmail.com sở
+// hữu, nhận dữ liệu từ sheet gốc trong Workspace GHN. Đặt ngoài Workspace vì
+// chính sách GHN cấm share cho service account; sheet vẫn private (chỉ share
+// đích danh), không publish to web.
+export const BIZ_SOURCE_SHEET_ID = "1dK61YVEnTxhnD8Kc1dIkhVmhVxcablJCJrlUwomjpMg";
+export const BIZ_SOURCE_GID = "364413449";
 export const BIZ_SOURCE_URL = `https://docs.google.com/spreadsheets/d/${BIZ_SOURCE_SHEET_ID}/edit?gid=${BIZ_SOURCE_GID}`;
 /**
  * Giá trị lane giữ đúng như trong nguồn, kể cả cách viết hoa và dấu sao.

@@ -166,9 +166,11 @@ npm run build 2>&1 | grep -E "^[┌├└]"
 
 ## Dữ liệu từ Google Sheet — đọc trực tiếp, có bản chụp dự phòng
 
-Tab Tình hình kinh doanh và Campaign đọc sheet [`tower control raw`](https://docs.google.com/spreadsheets/d/1WI5CrcFrTgDR4FNS8Un9RR-oHEvkdJWCj8OUTc2BFtk/edit)
+Tab Tình hình kinh doanh và Campaign đọc sheet [`KA control tower dest`](https://docs.google.com/spreadsheets/d/1dK61YVEnTxhnD8Kc1dIkhVmhVxcablJCJrlUwomjpMg/edit)
 (tab `vol`, `DD`, `DD OPR`) qua **Sheets API bằng service account**, làm mới mỗi
-giờ. Không có `GOOGLE_SA_KEY` thì rơi về **bản chụp** trong `lib/snapshot/*`.
+giờ. Sheet này do `kasghn2026@gmail.com` sở hữu, nhận dữ liệu từ sheet gốc
+trong Workspace GHN — đặt ngoài Workspace vì chính sách GHN cấm share cho
+service account (domain `*.iam.gserviceaccount.com` không nằm trong allowlist). Không có `GOOGLE_SA_KEY` thì rơi về **bản chụp** trong `lib/snapshot/*`.
 Giao diện luôn ghi rõ đang xem live hay bản chụp, chốt tới ngày nào.
 
 ```
