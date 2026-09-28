@@ -98,8 +98,6 @@ export interface CampaignRow {
   cpD1: OdrCell;
   /** Ngày thường, chỉ tồn tại ở D0 — nên chỉ so được với cpD0. */
   baselineD0: OdrCell;
-  /** Chênh lệch ODR theo điểm phần trăm: CP D0 − baseline D0. */
-  deltaD0Pp: number;
   /**
    * Sản lượng ngày D gấp bao nhiêu lần ngày thường. Chỉ có khi baseline trong
    * nguồn là trung bình MỖI NGÀY; baseline gộp nhiều ngày thì null — chia ra
@@ -137,7 +135,6 @@ export function campaignRows(ds: CampaignDataset, scope: DataScope): CampaignRow
       cpD0,
       cpD1,
       baselineD0,
-      deltaD0Pp: (cpD0.odr - baselineD0.odr) * 100,
       liftVsBaseline:
         ds.baselinePerDay && baselineVolumeD0 > 0
           ? volumeD0 / baselineVolumeD0

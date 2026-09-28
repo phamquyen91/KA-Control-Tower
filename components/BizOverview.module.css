@@ -363,6 +363,13 @@
   white-space: nowrap;
 }
 
+/* Tên cột căn giữa: đầu đề ngắn, ô số căn phải — căn giữa giúp hàng tiêu đề
+   đọc thành một dải đều thay vì so le theo độ dài từng chữ. Ô đầu của hàng
+   header đầu tiên vẫn căn trái vì nó đứng trên cột tên (tháng / kỳ). */
+.table thead th {
+  text-align: center;
+}
+
 .table thead th {
   font-size: 10px;
   font-weight: 700;

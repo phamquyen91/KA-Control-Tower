@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { SCOPE_LABEL } from "@/lib/labels";
-import { formatNumber, formatPercent, formatPp } from "@/lib/format";
+import { formatNumber, formatPercent } from "@/lib/format";
 import type { DeliveryTeam, Direction } from "@/lib/campaignData";
 import type { CampaignPayload } from "@/lib/campaignViewModel";
 import type { DataScope } from "@/lib/tabs";
@@ -443,9 +443,9 @@ function PeriodCard({
               <th scope="col">Đơn ngày D</th>
               <th scope="col">Đơn ngày D+1</th>
               {hasLift && <th scope="col">Gấp ngày thường</th>}
-              <th scope="col">ODR ngày D</th>
-              <th scope="col">vs ngày thường</th>
-              {payload.hasOpr && <th scope="col">OPR ngày D</th>}
+              <th scope="col">ODR D</th>
+              <th scope="col">ODR D+1</th>
+              <th scope="col">ODR thường</th>
             </tr>
           </thead>
           <tbody>
@@ -466,19 +466,19 @@ function PeriodCard({
                       : `${r.liftVsBaseline.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}×`}
                   </td>
                 )}
-                {/* Kỳ chưa chốt: để trống cả ODR lẫn chênh lệch, không hiện số
-                    thấp giả rồi tô đỏ oan. */}
+                {/* Kỳ chưa chốt để trống hết: đơn còn đang đi đường bị tính
+                    là chưa đúng hạn, hiện ra chỉ tổ bị tô đỏ oan.
+                    Ngày thường thiếu baseline (CP 1.1) cũng để trống chứ không
+                    hiện 0,0%. */}
                 <RateCell value={r.settled ? r.cpD0.odr : null} />
-                {r.settled ? (
-                  <td className={r.deltaD0Pp >= 0 ? styles.up : styles.down}>
-                    {formatPp(r.deltaD0Pp)}
-                  </td>
-                ) : (
-                  <td>—</td>
-                )}
-                {payload.hasOpr && (
-                  <RateCell value={r.oprD0 ? r.oprD0.odr : null} />
-                )}
+                <RateCell value={r.settled ? r.cpD1.odr : null} />
+                <RateCell
+                  value={
+                    r.settled && r.baselineD0.orders > 0
+                      ? r.baselineD0.odr
+                      : null
+                  }
+                />
               </tr>
             ))}
           </tbody>
