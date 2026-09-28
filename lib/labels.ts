@@ -8,7 +8,7 @@ import type { DataScope } from "./tabs";
 // chính sách GHN cấm share cho service account; sheet vẫn private (chỉ share
 // đích danh), không publish to web.
 export const BIZ_SOURCE_SHEET_ID = "1dK61YVEnTxhnD8Kc1dIkhVmhVxcablJCJrlUwomjpMg";
-export const BIZ_SOURCE_GID = "364413449";
+export const BIZ_SOURCE_GID = "0";
 export const BIZ_SOURCE_URL = `https://docs.google.com/spreadsheets/d/${BIZ_SOURCE_SHEET_ID}/edit?gid=${BIZ_SOURCE_GID}`;
 /**
  * Giá trị lane giữ đúng như trong nguồn, kể cả cách viết hoa và dấu sao.
