@@ -571,20 +571,20 @@ function ProvinceCard({
   // ra chỉ được một cột toàn số 0 và một cột trùng với tổng.
   const splitByTeam = scope === "SPB";
   const rateLabel = isPickup ? "OPR" : "ODR";
-  // Hai bảng đếm trên HAI MẪU khác nhau nên tổng của chúng không bằng nhau, và
-  // cũng không bằng cột sản lượng trên biểu đồ (biểu đồ dùng mẫu hẹn lấy). Gọi
-  // cả hai là "Sản lượng" thì người đọc sẽ tưởng có số sai; đặt tên theo đúng
-  // mẫu để mỗi con số tự nói nó đếm cái gì.
-  const volumeLabel = isPickup ? "Đơn hẹn lấy" : "Đơn mẫu giao";
+  // Hai bảng đếm hai đại lượng khác nhau — sản lượng HẸN LẤY (tab `DD OPR`) và
+  // sản lượng HẸN GIAO (tab `DD`), cùng đọc cột `total_orders_in_sample` của
+  // tab tương ứng. Tổng hai bảng không bằng nhau và đó là đúng; tên cột phải
+  // nói rõ từng bảng đếm gì, nếu không sẽ bị đọc thành một bên sai số.
+  const volumeLabel = isPickup ? "Sản lượng hẹn lấy" : "Sản lượng hẹn giao";
 
   return (
     <Card
       scope={scope}
-      title={`Top ${payload.topLimit} tỉnh ${isPickup ? "lấy" : "giao"} — ${campaign}`}
+      title={`Top ${payload.topLimit} tỉnh sản lượng ${isPickup ? "lấy" : "giao"} — ${campaign}`}
       note={
         isPickup
-          ? "Xếp theo đơn hẹn lấy ngày D · cùng mẫu với biểu đồ sản lượng, tỷ lệ là OPR"
-          : "Xếp theo đơn trong mẫu giao ngày D · mẫu riêng của ODR, tổng nhỏ hơn sản lượng hẹn lấy"
+          ? "Sản lượng hẹn lấy ngày D · cùng nguồn với biểu đồ sản lượng, tỷ lệ là OPR"
+          : "Sản lượng hẹn giao ngày D · nguồn riêng, tổng không bằng sản lượng hẹn lấy"
       }
     >
       <div className={styles.tableScroll}>

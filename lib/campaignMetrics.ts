@@ -12,10 +12,14 @@ import { dailyFcFor } from "./targetData";
 import type { DataScope } from "./tabs";
 
 // HAI MẪU KHÁC NHAU, ĐỪNG TRỘN:
-//  - tab `DD`     = mẫu GIAO. Dùng cho ODR. Sản lượng của nó là số đơn giao
-//                   trong mẫu, KHÔNG phải sản lượng của ngày campaign.
-//  - tab `DD OPR` = mẫu HẸN LẤY. Dùng cho OPR và cho SẢN LƯỢNG. FC của Shopee
-//                   là dự báo đơn lấy nên chỉ mẫu này mới so với FC được.
+//  - tab `DD`     = sản lượng HẸN GIAO + ODR. Dùng cho bảng top tỉnh giao.
+//                   KHÔNG phải sản lượng của ngày campaign, đừng đem so FC.
+//  - tab `DD OPR` = sản lượng HẸN LẤY + OPR. Dùng cho biểu đồ sản lượng, bảng
+//                   kỳ, bảng đội giao và bảng top tỉnh lấy. FC của Shopee là
+//                   dự báo đơn lấy nên chỉ nguồn này mới so với FC được.
+//
+// Cả hai cùng tên cột `total_orders_in_sample`; parser tra THEO TÊN nên đổi
+// thứ tự cột trong sheet không làm lệch số.
 //
 // Lấy nhầm sản lượng từ `DD` cho ra CP 8.8 Bulky 70k (34% FC, gấp 1,2 lần ngày
 // thường); lấy đúng từ `DD OPR` ra 172k (83% FC, gấp 2,9 lần) — tức là khác
@@ -198,9 +202,12 @@ export interface ProvinceRow extends ProvinceCell {
  * Xếp theo sản lượng thì không cần ngưỡng mẫu tối thiểu: tỉnh vài đơn tự khắc
  * rơi xuống cuối, không thể lọt top nhờ tỷ lệ 100% may mắn.
  *
- * NGUỒN THEO CHIỀU — hai chiều đo hai việc khác nhau nên lấy hai tab khác nhau:
- *  - "from" (tỉnh lấy)  → tab `DD OPR`: sản lượng hẹn lấy + OPR
- *  - "to"   (tỉnh giao) → tab `DD`:     sản lượng giao trong mẫu + ODR
+ * NGUỒN THEO CHIỀU — hai chiều đo hai đại lượng khác nhau nên lấy hai tab
+ * khác nhau, cùng đọc cột `total_orders_in_sample` của tab tương ứng:
+ *  - "from" (tỉnh lấy)  → tab `DD OPR`: sản lượng HẸN LẤY + OPR
+ *  - "to"   (tỉnh giao) → tab `DD`:     sản lượng HẸN GIAO + ODR
+ *
+ * Tổng hai bảng không bằng nhau, và đó là đúng — chúng đếm hai việc khác nhau.
  */
 export function topProvincesByVolume(
   ds: CampaignDataset,
