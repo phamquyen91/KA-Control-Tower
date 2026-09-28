@@ -103,6 +103,22 @@ function base64url(input: string | Buffer) {
   return Buffer.from(input).toString("base64url");
 }
 
+/**
+ * Rút thông điệp lỗi Google trả về. Thân lỗi của Google là
+ * `{error: {message, status}}`; lấy nguyên văn để người vận hành biết chính xác
+ * phải sửa gì, cắt ngắn để không tràn cả trang HTML lỗi vào giao diện.
+ */
+async function googleError(res: Response): Promise<string> {
+  const body = await res.text().catch(() => "");
+  try {
+    const parsed = JSON.parse(body) as { error?: { message?: string } };
+    if (parsed.error?.message) return parsed.error.message.slice(0, 300);
+  } catch {
+    // Không phải JSON (trang lỗi HTML chẳng hạn) — dùng nguyên văn đã cắt.
+  }
+  return body.slice(0, 200) || res.statusText;
+}
+
 /** Đổi JWT ký bằng khoá service account lấy access token (chuẩn OAuth 2.0 JWT bearer). */
 async function accessToken(sa: ServiceAccountKey): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
@@ -131,7 +147,9 @@ async function accessToken(sa: ServiceAccountKey): Promise<string> {
     cache: "no-store",
   });
   if (!res.ok) {
-    throw new Error(`Google token endpoint trả ${res.status}`);
+    throw new Error(
+      `Google token endpoint trả ${res.status}: ${await googleError(res)}`,
+    );
   }
   const data = (await res.json()) as { access_token?: string };
   if (!data.access_token) throw new Error("Google không trả access_token");
@@ -163,12 +181,10 @@ async function fetchTabs(sa: ServiceAccountKey): Promise<Record<keyof typeof TAB
     cache: "no-store",
   });
   if (!res.ok) {
-    // 403 gần như chắc chắn là chưa share sheet cho service account.
-    throw new Error(
-      res.status === 403
-        ? "Sheets API 403 — sheet chưa share cho email service account?"
-        : `Sheets API trả ${res.status}`,
-    );
+    // Hiện nguyên văn lý do Google trả về, KHÔNG đoán. Cùng mã 403 có thể là
+    // chưa share sheet, hoặc chưa bật Sheets API trong project, hoặc key thuộc
+    // project khác — đoán sai một cái là người sửa đi nhầm hướng cả buổi.
+    throw new Error(`Sheets API ${res.status}: ${await googleError(res)}`);
   }
   const data = (await res.json()) as BatchGetResponse;
   const ranges = data.valueRanges ?? [];
