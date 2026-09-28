@@ -571,12 +571,21 @@ function ProvinceCard({
   // ra chỉ được một cột toàn số 0 và một cột trùng với tổng.
   const splitByTeam = scope === "SPB";
   const rateLabel = isPickup ? "OPR" : "ODR";
+  // Hai bảng đếm trên HAI MẪU khác nhau nên tổng của chúng không bằng nhau, và
+  // cũng không bằng cột sản lượng trên biểu đồ (biểu đồ dùng mẫu hẹn lấy). Gọi
+  // cả hai là "Sản lượng" thì người đọc sẽ tưởng có số sai; đặt tên theo đúng
+  // mẫu để mỗi con số tự nói nó đếm cái gì.
+  const volumeLabel = isPickup ? "Đơn hẹn lấy" : "Đơn mẫu giao";
 
   return (
     <Card
       scope={scope}
       title={`Top ${payload.topLimit} tỉnh ${isPickup ? "lấy" : "giao"} — ${campaign}`}
-      note={`Xếp theo sản lượng ngày D · ${isPickup ? "mẫu hẹn lấy, tỷ lệ là OPR" : "mẫu giao, tỷ lệ là ODR"}`}
+      note={
+        isPickup
+          ? "Xếp theo đơn hẹn lấy ngày D · cùng mẫu với biểu đồ sản lượng, tỷ lệ là OPR"
+          : "Xếp theo đơn trong mẫu giao ngày D · mẫu riêng của ODR, tổng nhỏ hơn sản lượng hẹn lấy"
+      }
     >
       <div className={styles.tableScroll}>
         <table className={styles.table}>
@@ -604,7 +613,7 @@ function ProvinceCard({
                     scope="col"
                     className={ti > 0 ? styles.groupDivider : undefined}
                   >
-                    Sản lượng
+                    {volumeLabel}
                   </th>,
                   <th key={`${team}-r`} scope="col">
                     {rateLabel}
@@ -616,7 +625,7 @@ function ProvinceCard({
             <thead>
               <tr>
                 <th scope="col">Tỉnh</th>
-                <th scope="col">Sản lượng</th>
+                <th scope="col">{volumeLabel}</th>
                 <th scope="col">{rateLabel}</th>
               </tr>
             </thead>
