@@ -22,6 +22,19 @@ import { FallbackWarning, SourceLine } from "./SourceLine";
 import chart from "./VolumeChart.module.css";
 import styles from "./BizOverview.module.css";
 
+/**
+ * Trần trục sản lượng, cố định theo scope.
+ *
+ * Để trần tự bám dữ liệu thì cột luôn cao gần kịch khung và đè lên đường hoàn
+ * thành — thứ người xem cần đọc. Đặt cao hơn đỉnh thật (Bulky ~2,5tr, Standard
+ * ~8,1tr) để cột thấp xuống, đồng thời giữ Created và GTTC cùng scope chung
+ * một thước nên so trực tiếp được.
+ */
+const VOLUME_AXIS_MAX: Record<DataScope, number> = {
+  SPB: 5_000_000,
+  SPE: 10_000_000,
+};
+
 type LoadState =
   | { status: "loading" }
   | { status: "unauthenticated" }
@@ -119,9 +132,14 @@ export default function BizOverview() {
         <br />
         {formatMonth(latestMonth)} mới chạy tới {payload.source.dataThrough} —
         cột tháng đó thấp hẳn là đúng, không phải sụt giảm. YTD chỉ cộng các
-        tháng đã đủ, tháng đang chạy nhìn riêng ở ô MTD. FC đối chiếu với
-        Created, AOP đối chiếu với GTTC; mức hoàn thành FC của tháng đang chạy
-        so với FC luỹ kế từ 01 tới đúng ngày chốt, không so với FC trọn tháng.
+        tháng đã đủ, tháng đang chạy nhìn riêng ở ô MTD.
+        <br />
+        Hai đường hoàn thành đọc theo hai cách khác nhau:{" "}
+        <b>Created so FC</b> — tháng đang chạy so với FC luỹ kế từ ngày 01 tới
+        đúng ngày chốt, nên tỷ lệ vẫn đọc được như các tháng đủ.{" "}
+        <b>GTTC so AOP trọn tháng</b> — AOP không có số theo ngày để cắt, nên
+        tháng đang chạy cho biết đã đi được bao nhiêu phần mục tiêu, thấp là
+        đúng bản chất.
       </p>
     </div>
   );
@@ -505,11 +523,6 @@ function ScopeCell({
     <ChartCard
       scope={scope}
       title={isCreated ? "Created Volume" : "GTTC Volume"}
-      note={
-        isCreated
-          ? "Cột: sản lượng Created · Đường: mức hoàn thành so FC. Tháng đang chạy so với FC luỹ kế từ đầu tháng tới ngày chốt dữ liệu"
-          : "Cột: sản lượng GTTC · Đường: mức hoàn thành so AOP trọn tháng — tháng đang chạy cho thấy đã đi được bao nhiêu phần mục tiêu"
-      }
       legend={
         <Legend
           scope={scope}
@@ -523,6 +536,7 @@ function ScopeCell({
         months={months}
         bars={bars}
         lines={lines}
+        maxValue={VOLUME_AXIS_MAX[scope]}
         ariaLabel={`Sản lượng ${isCreated ? "Created" : "GTTC"} và mức hoàn thành ${target} của ${SCOPE_LABEL[scope]}`}
       />
     </ChartCard>
@@ -538,7 +552,8 @@ function ChartCard({
 }: {
   scope: DataScope;
   title: string;
-  note: string;
+  /** Bỏ trống khi tiêu đề và chú giải đã đủ nói — dòng chú thích chỉ tổ chật. */
+  note?: string;
   legend?: React.ReactNode;
   children: React.ReactNode;
 }) {
@@ -553,7 +568,7 @@ function ChartCard({
         </h4>
         {legend}
       </div>
-      <p className={styles.cardNote}>{note}</p>
+      {note && <p className={styles.cardNote}>{note}</p>}
       {children}
     </div>
   );

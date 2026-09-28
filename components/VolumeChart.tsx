@@ -38,6 +38,13 @@ export interface VolumeChartProps {
   rightAxisLabel?: string;
   /** Nhãn trục X; mặc định coi mốc là tháng và rút gọn thành T1, T2... */
   formatTick?: (value: string) => string;
+  /**
+   * Trần cố định cho trục trái. Mặc định trần bám theo dữ liệu, cột luôn cao
+   * gần kịch khung và đè lên đường. Đặt trần cao hơn đỉnh thật sẽ hạ cột
+   * xuống, nhường chỗ cho đường — và giữ các chart cùng scope so được với nhau
+   * qua các lần dữ liệu đổi. Trần nhỏ hơn đỉnh thật bị bỏ qua để không cắt cụt cột.
+   */
+  maxValue?: number;
 }
 
 const WIDTH = 720;
@@ -61,6 +68,7 @@ export default function VolumeChart({
   grouped = false,
   rightAxisLabel = "đạt 100%",
   formatTick = formatMonthShort,
+  maxValue,
 }: VolumeChartProps) {
   // Tháng đang được trỏ/chạm/focus. null = không hiện tooltip.
   const [active, setActive] = useState<number | null>(null);
@@ -70,7 +78,7 @@ export default function VolumeChart({
   const peak = grouped
     ? Math.max(...bars.flatMap((segs) => segs.map((seg) => seg.value)), 0)
     : Math.max(...stackTotals, 0);
-  const topLeft = niceCeil(peak);
+  const topLeft = maxValue && maxValue >= peak ? maxValue : niceCeil(peak);
 
   // Trục phải cho % hoàn thành. Cố định 0–150% để các chart so được với nhau
   // và mốc 100% luôn nằm cùng một chỗ.
