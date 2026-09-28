@@ -20,7 +20,7 @@ Mở http://localhost:3000.
 | **Sức khoẻ vận hành** | **Nhúng app báo cáo KAS qua iframe** | kas-shopee-performance |
 | Khiếu nại | Placeholder | — |
 | Đền bù | Placeholder | — |
-| **Campaign Shopee** | **Đã dựng** | Sheet `tower control raw` · `raw tab 2` |
+| **Campaign Shopee** | **Đã dựng** | Sheet `KA control tower dest` · tab `DD` + `DD OPR` |
 | Quản trị công việc KA-SPE | Placeholder | — |
 
 Các tab placeholder liệt kê sẵn nội dung dự kiến để triển khai sau.

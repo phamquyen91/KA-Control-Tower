@@ -3,7 +3,7 @@ import "server-only";
 import type { SheetRows } from "../sheetParse";
 
 // SỐ LIỆU NỘI BỘ — server-only. Sinh tự động bởi scripts/gen-snapshot.ts,
-// KHÔNG SỬA TAY. Nguồn: Google Sheet "tower control raw", tab `vol`
+// KHÔNG SỬA TAY. Nguồn: Google Sheet "KA control tower dest", tab `vol`
 // (287 dòng), lấy ngày 2026-09-28.
 //
 // Đây là bản dự phòng khi không đọc được sheet trực tiếp (thiếu GOOGLE_SA_KEY

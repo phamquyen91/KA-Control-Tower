@@ -9,7 +9,7 @@ import type {
 } from "../sheetParse";
 
 // SỐ LIỆU NỘI BỘ — server-only. Sinh tự động bởi scripts/gen-snapshot.ts,
-// KHÔNG SỬA TAY. Nguồn: Google Sheet "tower control raw", tab `DD`
+// KHÔNG SỬA TAY. Nguồn: Google Sheet "KA control tower dest", tab `DD`
 // (52068 dòng), lấy ngày 2026-09-28.
 //
 // Đây là bản dự phòng khi không đọc được sheet trực tiếp (thiếu GOOGLE_SA_KEY
@@ -4317,7 +4317,7 @@ export const CAMPAIGN_SNAPSHOT: CampaignAgg = {
 };
 
 // SỐ LIỆU NỘI BỘ — server-only. Sinh tự động bởi scripts/gen-snapshot.ts,
-// KHÔNG SỬA TAY. Nguồn: Google Sheet "tower control raw", tab `DD OPR`
+// KHÔNG SỬA TAY. Nguồn: Google Sheet "KA control tower dest", tab `DD OPR`
 // (1870 dòng), lấy ngày 2026-09-28.
 //
 // Đây là bản dự phòng khi không đọc được sheet trực tiếp (thiếu GOOGLE_SA_KEY

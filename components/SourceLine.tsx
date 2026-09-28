@@ -1,5 +1,6 @@
 "use client";
 
+import { BIZ_SOURCE_NAME } from "@/lib/labels";
 import type { DataSource } from "@/lib/sheetSource";
 
 /**
@@ -20,7 +21,7 @@ export function SourceLine({ source, tab }: { source: DataSource; tab: string })
 
   return (
     <>
-      Nguồn: tower control raw · tab {tab} ·{" "}
+      Nguồn: {BIZ_SOURCE_NAME} · tab {tab} ·{" "}
       {source.kind === "live" ? (
         <>
           <b>đọc trực tiếp từ sheet</b>

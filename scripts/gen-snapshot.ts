@@ -12,6 +12,7 @@
  * ~20.000 dòng quá nặng cho repo; vol và OPR nhỏ nên giữ nguyên dạng thô.
  */
 import { readFileSync, writeFileSync } from "node:fs";
+import { BIZ_SOURCE_NAME } from "../lib/labels";
 import { aggregateDd, type SheetRows } from "../lib/sheetParse";
 
 const [, , input, date] = process.argv;
@@ -30,7 +31,7 @@ const trim = (rows: SheetRows) =>
   rows.filter((r) => r.some((c) => c !== null && c !== undefined && String(c).trim() !== ""));
 
 const banner = (tab: string, n: number) => `// SỐ LIỆU NỘI BỘ — server-only. Sinh tự động bởi scripts/gen-snapshot.ts,
-// KHÔNG SỬA TAY. Nguồn: Google Sheet "tower control raw", tab \`${tab}\`
+// KHÔNG SỬA TAY. Nguồn: Google Sheet "${BIZ_SOURCE_NAME}", tab \`${tab}\`
 // (${n} dòng), lấy ngày ${date}.
 //
 // Đây là bản dự phòng khi không đọc được sheet trực tiếp (thiếu GOOGLE_SA_KEY
