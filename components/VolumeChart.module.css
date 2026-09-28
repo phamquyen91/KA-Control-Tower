@@ -89,6 +89,19 @@
   color: var(--orange);
 }
 
+/* Bộ nhạt — dùng khi trên cùng biểu đồ có đường cùng hệ màu với cột. Cột lùi
+   xuống làm nền, đường đậm nổi lên trước. Dùng ở biểu đồ ngày D / D+1 của
+   campaign, nơi cột và đường cùng nói về một ngày nên phải cùng màu. */
+.barSoftWarm {
+  fill: var(--orange-soft);
+  color: var(--orange-soft);
+}
+
+.barSoftCool {
+  fill: var(--blue-soft);
+  color: var(--blue-soft);
+}
+
 .lineTotal {
   stroke: var(--orange-dark);
   color: var(--orange-dark);

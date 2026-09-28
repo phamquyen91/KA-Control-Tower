@@ -537,12 +537,14 @@
   display: inline-block;
 }
 
+/* Ô màu chú giải của CỘT — phải đúng màu nhạt của cột, không phải màu đậm
+   của đường cùng ngày, nếu không chú giải nói sai. */
 .swD0 {
-  background: var(--orange);
+  background: var(--orange-soft);
 }
 
 .swD1 {
-  background: var(--blue);
+  background: var(--blue-soft);
 }
 
 .lnD0,
