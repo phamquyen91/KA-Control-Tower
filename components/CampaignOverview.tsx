@@ -595,6 +595,13 @@ function ProvinceCard({
                 <th scope="col" rowSpan={2}>
                   Tỉnh
                 </th>
+                {/* Cột tổng đứng ngay sau tên tỉnh: bảng xếp hạng THEO TỔNG,
+                    nên không có nó thì thứ tự hàng trông như sai mỗi khi đội
+                    nhỏ lật ngược kết quả (Tây Ninh 2.076+34 đứng trên Cần Thơ
+                    2.107+0). Cũng là con số để đối chiếu thẳng với sheet. */}
+                <th scope="col" rowSpan={2}>
+                  Tổng
+                </th>
                 {PROVINCE_TEAM_ORDER.map((team, ti) => (
                   <th
                     key={team}
@@ -635,6 +642,9 @@ function ProvinceCard({
             {rows.map((r) => (
               <tr key={r.province}>
                 <th scope="row">{r.province}</th>
+                {splitByTeam && (
+                  <td className={styles.strong}>{formatNumber(r.orders)}</td>
+                )}
                 {splitByTeam
                   ? PROVINCE_TEAM_ORDER.map((team, ti) => [
                       <td
