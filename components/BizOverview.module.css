@@ -355,19 +355,15 @@
   font-size: 12.5px;
 }
 
+/* Mọi ô căn giữa — cả tiêu đề lẫn số. Cột đầu (tháng / kỳ / tỉnh) là nhãn
+   hàng nên vẫn căn trái ở quy tắc bên dưới: tên dài ngắn khác nhau, căn giữa
+   sẽ thành mép trái răng cưa và khó dò theo hàng. */
 .table th,
 .table td {
   padding: 7px 6px;
-  text-align: right;
+  text-align: center;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
-}
-
-/* Tên cột căn giữa: đầu đề ngắn, ô số căn phải — căn giữa giúp hàng tiêu đề
-   đọc thành một dải đều thay vì so le theo độ dài từng chữ. Ô đầu của hàng
-   header đầu tiên vẫn căn trái vì nó đứng trên cột tên (tháng / kỳ). */
-.table thead th {
-  text-align: center;
 }
 
 .table thead th {
@@ -377,7 +373,7 @@
   text-transform: uppercase;
   letter-spacing: 0.2px;
   border-bottom: 1px solid var(--text-3);
-  /* Cho tiêu đề xuống dòng: cột số bên phải mới đủ chỗ hiện trọn con số. */
+  /* Cho tiêu đề xuống dòng để cột hẹp vẫn hiện trọn chữ. */
   white-space: normal;
   line-height: 1.3;
 }
