@@ -228,7 +228,25 @@ không lặng lẽ ra 0.
 | --- | --- | --- |
 | `vol` | `timeview clientname lane weight_range vol_created vol_gtc` | `delivery_team` tuỳ chọn — không có thì bảng đội giao báo thiếu nguồn |
 | `DD` | `period_label type day_offset clientname fromprovince_new toprovince_new delivery_team total_orders_in_sample ontime_deli_odr_count` | `day_offset` baseline dạng `D0 (avg 7d)` = trung bình ngày → mới có cột "gấp ngày thường" |
-| `DD OPR` | như `DD` nhưng không có `toprovince_new`, đếm bằng `ontime_opr_count` | Mẫu khác tab `DD`, giữ riêng không trộn |
+| `DD OPR` | như `DD` nhưng không có `toprovince_new`, đếm đúng hạn bằng `ontime_opr_count` | Nguồn khác tab `DD`, không trộn |
+
+#### Hai loại sản lượng — đừng lẫn
+
+Hai tab đều có cột tên `total_orders_in_sample` nhưng đếm hai đại lượng khác
+nhau. Tổng của chúng KHÔNG bằng nhau, và đó là đúng.
+
+| Đại lượng | Tab | Vị trí cột hiện tại | Dùng ở đâu |
+| --- | --- | --- | --- |
+| Sản lượng **hẹn lấy** | `DD OPR` | cột **H** | Biểu đồ sản lượng ngày D/D+1, bảng thống kê kỳ, bảng đội giao, bảng top tỉnh sản lượng lấy, và **mọi so sánh với FC** |
+| Sản lượng **hẹn giao** | `DD` | cột **I** | Bảng top tỉnh sản lượng giao |
+
+FC của Shopee là dự báo đơn **lấy**, nên chỉ sản lượng hẹn lấy mới so với FC
+được. Lấy nhầm từ `DD` từng cho ra CP 8.8 Bulky 70k (34% FC, gấp 1,2 lần ngày
+thường) thay vì 172k (83% FC, gấp 2,9 lần) — tức là khác nhau giữa "ngày
+campaign chẳng khác ngày thường" và một ngày cao điểm thật.
+
+Vị trí cột ở bảng trên chỉ để tra tay cho nhanh; **parser tra theo tên** nên
+sheet chèn hay đổi thứ tự cột không làm lệch số.
 
 Hai điểm trong `vol` dễ xử lý sai:
 
