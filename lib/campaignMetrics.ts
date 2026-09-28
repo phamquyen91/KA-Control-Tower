@@ -11,6 +11,16 @@ import {
 import { dailyFcFor } from "./targetData";
 import type { DataScope } from "./tabs";
 
+// HAI MẪU KHÁC NHAU, ĐỪNG TRỘN:
+//  - tab `DD`     = mẫu GIAO. Dùng cho ODR. Sản lượng của nó là số đơn giao
+//                   trong mẫu, KHÔNG phải sản lượng của ngày campaign.
+//  - tab `DD OPR` = mẫu HẸN LẤY. Dùng cho OPR và cho SẢN LƯỢNG. FC của Shopee
+//                   là dự báo đơn lấy nên chỉ mẫu này mới so với FC được.
+//
+// Lấy nhầm sản lượng từ `DD` cho ra CP 8.8 Bulky 70k (34% FC, gấp 1,2 lần ngày
+// thường); lấy đúng từ `DD OPR` ra 172k (83% FC, gấp 2,9 lần) — tức là khác
+// nhau giữa "ngày campaign chẳng khác ngày thường" và một ngày cao điểm thật.
+
 export interface OdrCell {
   orders: number;
   ontime: number;
@@ -46,8 +56,44 @@ function lookup(
   return row ? cell(row.orders, row.ontime) : EMPTY;
 }
 
+/**
+ * Gộp tab `DD OPR`: trả về sản lượng hẹn lấy và tỷ lệ lấy đúng hạn.
+ * null khi kỳ/ngày đó không có dòng nào — để giao diện bỏ trống, không ra 0.
+ */
+function oprCell(
+  ds: CampaignDataset,
+  scope: DataScope,
+  campaign: string,
+  type: "CP" | "baseline",
+  day: DayOffset,
+  filter: (r: CampaignDataset["opr"][number]) => boolean = () => true,
+): OdrCell | null {
+  const rows = ds.opr.filter(
+    (r) =>
+      r.scope === scope &&
+      r.campaign === campaign &&
+      r.type === type &&
+      r.day === day &&
+      filter(r),
+  );
+  if (rows.length === 0) return null;
+  return cell(
+    rows.reduce((a, r) => a + r.orders, 0),
+    rows.reduce((a, r) => a + r.ontime, 0),
+  );
+}
+
 export interface CampaignRow {
   campaign: string;
+  /**
+   * Sản lượng hẹn lấy (tab `DD OPR`) — đây mới là "sản lượng" của kỳ, và là
+   * thứ duy nhất cùng phạm vi với FC.
+   */
+  volumeD0: number;
+  volumeD1: number;
+  /** Sản lượng hẹn lấy trung bình một ngày thường. */
+  baselineVolumeD0: number;
+  /** Mẫu GIAO (tab `DD`) — chỉ dùng lấy ODR, đừng đọc `orders` như sản lượng. */
   cpD0: OdrCell;
   cpD1: OdrCell;
   /** Ngày thường, chỉ tồn tại ở D0 — nên chỉ so được với cpD0. */
@@ -71,47 +117,34 @@ export interface CampaignRow {
   settled: boolean;
 }
 
-function oprCell(
-  ds: CampaignDataset,
-  scope: DataScope,
-  campaign: string,
-  day: DayOffset,
-  filter: (r: CampaignDataset["opr"][number]) => boolean = () => true,
-): OdrCell | null {
-  const rows = ds.opr.filter(
-    (r) =>
-      r.scope === scope &&
-      r.campaign === campaign &&
-      r.type === "CP" &&
-      r.day === day &&
-      filter(r),
-  );
-  if (rows.length === 0) return null;
-  return cell(
-    rows.reduce((a, r) => a + r.orders, 0),
-    rows.reduce((a, r) => a + r.ontime, 0),
-  );
-}
-
 export function campaignRows(ds: CampaignDataset, scope: DataScope): CampaignRow[] {
   return ds.campaigns.map((campaign) => {
     const cpD0 = lookup(ds, scope, campaign, "CP", "D0");
     const cpD1 = lookup(ds, scope, campaign, "CP", "D+1");
     const baselineD0 = lookup(ds, scope, campaign, "baseline", "D0");
+    const pickD0 = oprCell(ds, scope, campaign, "CP", "D0");
+    const pickD1 = oprCell(ds, scope, campaign, "CP", "D+1");
+    const pickBase = oprCell(ds, scope, campaign, "baseline", "D0");
+    const volumeD0 = pickD0?.orders ?? 0;
+    const volumeD1 = pickD1?.orders ?? 0;
+    const baselineVolumeD0 = pickBase?.orders ?? 0;
     const days = campaignDays(ds, campaign);
     return {
       campaign,
+      volumeD0,
+      volumeD1,
+      baselineVolumeD0,
       cpD0,
       cpD1,
       baselineD0,
       deltaD0Pp: (cpD0.odr - baselineD0.odr) * 100,
       liftVsBaseline:
-        ds.baselinePerDay && baselineD0.orders > 0
-          ? cpD0.orders / baselineD0.orders
+        ds.baselinePerDay && baselineVolumeD0 > 0
+          ? volumeD0 / baselineVolumeD0
           : null,
-      oprD0: oprCell(ds, scope, campaign, "D0"),
-      fcD0: completion(cpD0.orders, days && dailyFcFor(scope, days.d0)),
-      fcD1: completion(cpD1.orders, days && dailyFcFor(scope, days.d1)),
+      oprD0: pickD0,
+      fcD0: completion(volumeD0, days && dailyFcFor(scope, days.d0)),
+      fcD1: completion(volumeD1, days && dailyFcFor(scope, days.d1)),
       date: days?.d0,
       settled: isSettled(ds, campaign),
     };
@@ -132,44 +165,45 @@ const TEAM_ORDER: DeliveryTeam[] = ["AHM", "GHN"];
 /** Sản lượng ngày D theo đội giao, kèm tỷ trọng trong từng kỳ campaign. */
 export function teamRows(ds: CampaignDataset, scope: DataScope): TeamRow[] {
   return ds.campaigns.map((campaign) => {
-    const rows = ds.teams.filter(
-      (r) =>
-        r.scope === scope &&
-        r.campaign === campaign &&
-        r.type === "CP" &&
-        r.day === "D0",
-    );
-    const total = rows.reduce((acc, r) => acc + r.orders, 0);
+    // Cùng nguồn với cột sản lượng trên biểu đồ (mẫu hẹn lấy), nếu không hai
+    // chỗ cùng gọi là "sản lượng" lại ra hai con số khác nhau.
+    const cells = TEAM_ORDER.map((team) => ({
+      team,
+      orders:
+        oprCell(ds, scope, campaign, "CP", "D0", (r) => r.team === team)
+          ?.orders ?? 0,
+    }));
+    const total = cells.reduce((a, c) => a + c.orders, 0);
     return {
       campaign,
-      cells: TEAM_ORDER.map((team) => {
-        const orders = rows
-          .filter((r) => r.team === team)
-          .reduce((acc, r) => acc + r.orders, 0);
-        return { team, orders, share: total === 0 ? 0 : orders / total };
-      }),
+      cells: cells.map((c) => ({
+        ...c,
+        share: total === 0 ? 0 : c.orders / total,
+      })),
     };
   });
 }
 
-export interface ProvinceRow extends OdrCell {
+export interface ProvinceCell {
+  orders: number;
+  /** ODR (chiều giao) hoặc OPR (chiều lấy); null khi đội đó không chạy tỉnh này. */
+  rate: number | null;
+}
+
+export interface ProvinceRow extends ProvinceCell {
   province: string;
-  /** Bóc tách theo đội giao; tỉnh nào đội đó không chạy thì các số bằng 0. */
-  byTeam: Record<DeliveryTeam, OdrCell>;
-  /**
-   * OPR (chiều lấy) từ tab `DD OPR` — chỉ có với direction "from". Mẫu của
-   * tab OPR khác mẫu tab DD nên giữ riêng, không trộn vào orders/ontime ở trên.
-   * null khi tab OPR không có tỉnh/đội đó.
-   */
-  opr: OdrCell | null;
-  oprByTeam: Record<DeliveryTeam, OdrCell | null>;
+  byTeam: Record<DeliveryTeam, ProvinceCell>;
 }
 
 /**
- * Top tỉnh theo SẢN LƯỢNG (không phải theo ODR).
+ * Top tỉnh theo SẢN LƯỢNG (không phải theo tỷ lệ).
  *
  * Xếp theo sản lượng thì không cần ngưỡng mẫu tối thiểu: tỉnh vài đơn tự khắc
- * rơi xuống cuối, không thể lọt top nhờ ODR 100% may mắn.
+ * rơi xuống cuối, không thể lọt top nhờ tỷ lệ 100% may mắn.
+ *
+ * NGUỒN THEO CHIỀU — hai chiều đo hai việc khác nhau nên lấy hai tab khác nhau:
+ *  - "from" (tỉnh lấy)  → tab `DD OPR`: sản lượng hẹn lấy + OPR
+ *  - "to"   (tỉnh giao) → tab `DD`:     sản lượng giao trong mẫu + ODR
  */
 export function topProvincesByVolume(
   ds: CampaignDataset,
@@ -178,52 +212,58 @@ export function topProvincesByVolume(
   direction: Direction,
   limit: number,
 ): ProvinceRow[] {
-  const rows = ds.provinces.filter(
-    (r) =>
-      r.scope === scope &&
-      r.campaign === campaign &&
-      r.type === "CP" &&
-      r.day === "D0" &&
-      r.direction === direction,
-  );
+  const toCell = (orders: number, ontime: number): ProvinceCell => ({
+    orders,
+    // Tỉnh đội đó không chạy thì để trống, không hiện 0% — dễ đọc nhầm thành
+    // trễ toàn bộ.
+    rate: orders === 0 ? null : ontime / orders,
+  });
 
-  // Gộp các đội lại để xếp hạng, rồi mới bóc ngược ra từng đội. Xếp theo tổng
-  // chứ không theo từng đội, nếu không hai bảng con sẽ có danh sách tỉnh khác
-  // nhau và không đọc song song được.
-  const byProvince = new Map<string, typeof rows>();
-  for (const r of rows) {
-    const list = byProvince.get(r.province) ?? [];
-    list.push(r);
-    byProvince.set(r.province, list);
+  const groups = new Map<string, { orders: number; ontime: number; team: DeliveryTeam }[]>();
+  const push = (province: string, team: DeliveryTeam, orders: number, ontime: number) => {
+    const list = groups.get(province) ?? [];
+    list.push({ orders, ontime, team });
+    groups.set(province, list);
+  };
+
+  if (direction === "from") {
+    for (const r of ds.opr) {
+      if (r.scope === scope && r.campaign === campaign && r.type === "CP" && r.day === "D0") {
+        push(r.province, r.team, r.orders, r.ontime);
+      }
+    }
+  } else {
+    for (const r of ds.provinces) {
+      if (
+        r.scope === scope &&
+        r.campaign === campaign &&
+        r.type === "CP" &&
+        r.day === "D0" &&
+        r.direction === "to"
+      ) {
+        push(r.province, r.team, r.orders, r.ontime);
+      }
+    }
   }
 
-  return [...byProvince.entries()]
+  return [...groups.entries()]
     .map(([province, list]) => {
-      const orders = list.reduce((a, r) => a + r.orders, 0);
-      const ontime = list.reduce((a, r) => a + r.ontime, 0);
       const teamCell = (team: DeliveryTeam) => {
         const picked = list.filter((r) => r.team === team);
-        return cell(
+        return toCell(
           picked.reduce((a, r) => a + r.orders, 0),
           picked.reduce((a, r) => a + r.ontime, 0),
         );
       };
-      const opr = (team?: DeliveryTeam) =>
-        direction === "from"
-          ? oprCell(
-              ds,
-              scope,
-              campaign,
-              "D0",
-              (r) => r.province === province && (!team || r.team === team),
-            )
-          : null;
       return {
         province,
-        ...cell(orders, ontime),
+        // Xếp hạng theo TỔNG rồi mới bóc ra từng đội, nếu không hai bảng con sẽ
+        // có danh sách tỉnh khác nhau và không đọc song song được.
+        ...toCell(
+          list.reduce((a, r) => a + r.orders, 0),
+          list.reduce((a, r) => a + r.ontime, 0),
+        ),
         byTeam: { AHM: teamCell("AHM"), GHN: teamCell("GHN") },
-        opr: opr(),
-        oprByTeam: { AHM: opr("AHM"), GHN: opr("GHN") },
       };
     })
     .sort((a, b) => b.orders - a.orders)

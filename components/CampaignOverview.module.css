@@ -540,11 +540,11 @@
 /* Ô màu chú giải của CỘT — phải đúng màu nhạt của cột, không phải màu đậm
    của đường cùng ngày, nếu không chú giải nói sai. */
 .swD0 {
-  background: var(--orange-soft);
+  background: var(--orange-light);
 }
 
 .swD1 {
-  background: var(--blue-soft);
+  background: var(--blue-mid);
 }
 
 .lnD0,

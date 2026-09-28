@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 import {
-  LANE_ORDER,
   SCOPE_LABEL,
   TEAM_ORDER,
   WEIGHT_ORDER,
@@ -626,13 +625,16 @@ function Legend({
 }
 
 function LaneShareTable({ rows }: { rows: ScopePayload["laneShare"] }) {
+  // Cột lấy từ chính dữ liệu, không lấy từ LANE_ORDER: bên metrics đã loại các
+  // lane rỗng, header phải theo cho khớp số ô mỗi dòng.
+  const lanes = rows[0]?.shares.map((s) => s.lane) ?? [];
   return (
     <div className={styles.tableScroll}>
       <table className={styles.table}>
         <thead>
           <tr>
             <th scope="col">Tháng</th>
-            {LANE_ORDER.map((lane) => (
+            {lanes.map((lane) => (
               <th key={lane} scope="col">
                 {lane}
               </th>

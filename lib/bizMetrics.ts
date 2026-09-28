@@ -280,13 +280,23 @@ export interface LaneShareRow {
 
 /** Bảng tỷ trọng lane theo tháng: 4 cột tỷ trọng + 1 cột tổng tuyệt đối. */
 export function laneShareByMonth(ds: BizDataset, scope: DataScope): LaneShareRow[] {
+  // Chỉ giữ lane THỰC SỰ có sản lượng. Lane trống chiếm một cột toàn 0,0% mà
+  // không nói gì — "Không xác định" là ví dụ: nguồn cũ có vài dòng thiếu lane,
+  // nguồn hiện tại gán đủ nên cột đó rỗng hẳn.
+  //
+  // Điều kiện là tổng bằng 0 chứ không phải "làm tròn ra 0,0%": lane có vài
+  // trăm đơn vẫn hiện 0,0% nhưng bỏ đi thì các dòng không còn cộng đủ 100%.
+  const lanes = LANE_ORDER.filter((lane) =>
+    ds.rows.some((r) => r.scope === scope && r.lane === lane && r.created > 0),
+  );
+
   return ds.months.map((month) => {
     const rows = ds.rows.filter((r) => r.scope === scope && r.month === month);
     const totalCreated = sum(rows, "created");
     return {
       month,
       totalCreated,
-      shares: LANE_ORDER.map((lane) => ({
+      shares: lanes.map((lane) => ({
         lane,
         share: ratio(
           sum(

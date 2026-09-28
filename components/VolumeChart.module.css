@@ -69,8 +69,8 @@
 
 /* Bộ lạnh — dùng cho Created. */
 .barLow {
-  fill: #7aa2c9;
-  color: #7aa2c9;
+  fill: var(--blue-mid);
+  color: var(--blue-mid);
 }
 
 .barHigh {
@@ -87,19 +87,6 @@
 .barHighWarm {
   fill: var(--orange);
   color: var(--orange);
-}
-
-/* Bộ nhạt — dùng khi trên cùng biểu đồ có đường cùng hệ màu với cột. Cột lùi
-   xuống làm nền, đường đậm nổi lên trước. Dùng ở biểu đồ ngày D / D+1 của
-   campaign, nơi cột và đường cùng nói về một ngày nên phải cùng màu. */
-.barSoftWarm {
-  fill: var(--orange-soft);
-  color: var(--orange-soft);
-}
-
-.barSoftCool {
-  fill: var(--blue-soft);
-  color: var(--blue-soft);
 }
 
 .lineTotal {

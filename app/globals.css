@@ -3,11 +3,10 @@
   --orange-dark: #e04f00;
   --orange-light: #ff9e64;
   --orange-tint: #ffe4d2;
-  /* Cột nền của biểu đồ campaign: cùng hệ màu với đường cùng ngày nhưng nhạt
-     hẳn, để đường (màu đậm) nổi lên trên chứ không chìm vào cột. */
-  --orange-soft: #ffc9a6;
   --blue: #0e4174;
-  --blue-soft: #a9c0d6;
+  /* Sắc xanh trung gian, dùng cho cột nền khi trên cùng biểu đồ có đường màu
+     --blue: cột lùi xuống, đường nổi lên. */
+  --blue-mid: #7aa2c9;
   --blue-tint: #e8eef5;
   --text: #383838;
   --text-2: #6b6f76;

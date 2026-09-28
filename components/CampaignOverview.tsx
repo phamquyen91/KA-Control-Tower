@@ -289,14 +289,14 @@ function VolumeCard({
     {
       key: "d0",
       label: "Ngày D",
-      value: r.cpD0.orders,
-      className: chart.barSoftWarm,
+      value: r.volumeD0,
+      className: chart.barLowWarm,
     },
     {
       key: "d1",
       label: "Ngày D+1",
-      value: r.cpD1.orders,
-      className: chart.barSoftCool,
+      value: r.volumeD1,
+      className: chart.barLow,
     },
   ]);
 
@@ -321,7 +321,7 @@ function VolumeCard({
     <Card
       scope={scope}
       title="Sản lượng ngày D và D+1"
-      note="Cột: sản lượng từng ngày · Đường: mức hoàn thành so FC của chính ngày đó"
+      note="Cột: sản lượng hẹn lấy từng ngày · Đường: mức hoàn thành so FC của chính ngày đó"
       legend={
         <div className={styles.legend}>
           <span>
@@ -457,8 +457,8 @@ function PeriodCard({
                     <span className={styles.badgeSettling}>chưa chốt</span>
                   )}
                 </th>
-                <td>{formatNumber(r.cpD0.orders)}</td>
-                <td>{formatNumber(r.cpD1.orders)}</td>
+                <td>{formatNumber(r.volumeD0)}</td>
+                <td>{formatNumber(r.volumeD1)}</td>
                 {hasLift && (
                   <td>
                     {r.liftVsBaseline === null
@@ -477,7 +477,7 @@ function PeriodCard({
                   <td>—</td>
                 )}
                 {payload.hasOpr && (
-                  <RateCell value={r.settled && r.oprD0 ? r.oprD0.odr : null} />
+                  <RateCell value={r.oprD0 ? r.oprD0.odr : null} />
                 )}
               </tr>
             ))}
@@ -576,7 +576,7 @@ function ProvinceCard({
     <Card
       scope={scope}
       title={`Top ${payload.topLimit} tỉnh ${isPickup ? "lấy" : "giao"} — ${campaign}`}
-      note={`Xếp theo tổng sản lượng ngày D, chiều ${isPickup ? "tỉnh lấy hàng" : "tỉnh giao hàng"}`}
+      note={`Xếp theo sản lượng ngày D · ${isPickup ? "mẫu hẹn lấy, tỷ lệ là OPR" : "mẫu giao, tỷ lệ là ODR"}`}
     >
       <div className={styles.tableScroll}>
         <table className={styles.table}>
@@ -617,9 +617,7 @@ function ProvinceCard({
               <tr>
                 <th scope="col">Tỉnh</th>
                 <th scope="col">Sản lượng</th>
-                {(!isPickup || payload.hasOpr) && (
-                  <th scope="col">{rateLabel}</th>
-                )}
+                <th scope="col">{rateLabel}</th>
               </tr>
             </thead>
           )}
@@ -636,29 +634,11 @@ function ProvinceCard({
                       >
                         {formatNumber(r.byTeam[team].orders)}
                       </td>,
-                      // Chiều lấy dùng OPR từ tab riêng, chiều giao dùng ODR.
-                      // Tỉnh đội đó không chạy thì để trống chứ không hiện
-                      // 0,0% — dễ đọc nhầm thành trễ hết.
-                      <RateCell
-                        key={`${team}-r`}
-                        value={
-                          isPickup
-                            ? r.oprByTeam[team]?.odr ?? null
-                            : r.byTeam[team].orders === 0
-                              ? null
-                              : r.byTeam[team].odr
-                        }
-                      />,
+                      <RateCell key={`${team}-r`} value={r.byTeam[team].rate} />,
                     ])
                   : [
                       <td key="v">{formatNumber(r.orders)}</td>,
-                      isPickup ? (
-                        payload.hasOpr ? (
-                          <RateCell key="r" value={r.opr?.odr ?? null} />
-                        ) : null
-                      ) : (
-                        <RateCell key="r" value={r.odr} />
-                      ),
+                      <RateCell key="r" value={r.rate} />,
                     ]}
               </tr>
             ))}
