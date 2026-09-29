@@ -259,15 +259,19 @@ ODR/OPR của kỳ vừa diễn ra thấp giả tạo: đơn còn đang đi đư
 đúng hạn. Kỳ chưa đủ `SETTLE_DAYS` (5) ngày sau D+1 tính tới ngày chốt được gắn
 nhãn "chưa chốt", để trống ODR/OPR trên bảng và đường ODR. Sản lượng vẫn hiện.
 
-### YTD loại tháng đang chạy
+### YTD cộng cả tháng đang chạy, mục tiêu cắt theo
 
-`scopeProgress` chỉ cộng các tháng **đã đủ** vào YTD. Tháng đang chạy luôn
-khuyết ngày trong khi AOP của nó là mục tiêu trọn tháng — gộp vào sẽ kéo tỷ lệ
-hoàn thành xuống giả tạo. Với T9 mới có 2 ngày, YTD rơi từ 75,9% xuống 58,6%
-nếu gộp. Tháng đang chạy nhìn riêng ở ô MTD, có nhãn "đang chạy".
+`scopeProgress` cộng **mọi tháng có trong nguồn**, kể cả tháng chưa hết — nên
+số YTD khớp đúng khi cộng tay cả sheet. Bù lại, mẫu số cũng phải cắt: AOP của
+tháng đang chạy chỉ tính phần ứng với quãng đã chạy (`aopThrough`). Giữ mục
+tiêu trọn tháng thì tử số thiếu ngày mà mẫu số đủ tháng, tỷ lệ tụt giả tạo.
 
-Quy tắc tự chỉnh theo lịch: tháng cuối trong dữ liệu trùng tháng hiện tại thì
-coi là chưa đủ.
+`aopThrough` cắt theo **hình dạng ngày của FC**, không chia đều số ngày: T9
+chạy 27/30 ngày nhưng FC nói 92,1% sản lượng tháng rơi vào quãng đó (có ngày
+9.9). Thiếu FC thì lùi về tỷ lệ ngày theo lịch.
+
+Ô **MTD** cố tình khác: nó so với AOP **trọn tháng** vì câu hỏi ở đó là "đã đi
+được bao nhiêu phần mục tiêu tháng", không phải "có bám kịp nhịp không".
 
 ## Mục tiêu: FC và AOP
 

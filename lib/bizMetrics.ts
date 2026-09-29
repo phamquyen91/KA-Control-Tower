@@ -9,7 +9,7 @@ import {
   type Lane,
   type WeightBand,
 } from "./labels";
-import { aopFor, fcFor, fcThrough } from "./targetData";
+import { aopFor, aopThrough, fcFor, fcThrough } from "./targetData";
 import { formatMonth, formatMonthShort } from "./format";
 import type { DataScope } from "./tabs";
 
@@ -218,11 +218,11 @@ export interface ProgressStat {
   /** Nhãn kỳ, ví dụ "T1–T8/2026" hoặc "T8/2026". */
   periodLabel: string;
   /**
-   * Tháng bị loại khỏi tổng, dạng "YYYY-MM". Chỉ có ở YTD khi tháng cuối đang
-   * chạy. Giao diện phải nói ra: người đối chiếu sẽ cộng hết sheet và thấy
-   * lệch đúng bằng tháng này, tưởng app tính sai.
+   * Tháng cuối chưa hết và mục tiêu của nó đã được cắt theo quãng đã chạy,
+   * dạng "YYYY-MM". Giao diện phải nói ra, nếu không con số AOP hiện trên thẻ
+   * sẽ không khớp với bảng AOP gốc và bị tưởng là sai.
    */
-  excludesMonth?: string;
+  proRatedMonth?: string;
 }
 
 export interface ScopeProgress {
@@ -235,37 +235,44 @@ export interface ScopeProgress {
 /**
  * GTTC luỹ kế và GTTC tháng hiện tại, kèm mức hoàn thành so AOP cùng kỳ.
  *
- * YTD chỉ cộng các tháng ĐÃ ĐỦ. Tháng đang chạy bị loại vì nó luôn khuyết ngày
- * trong khi AOP của nó là mục tiêu trọn tháng — gộp vào sẽ kéo tỷ lệ hoàn thành
- * xuống một cách giả tạo, và mức bóp méo càng lớn khi tháng mới bắt đầu.
- * Tháng đang chạy được nhìn riêng ở ô MTD.
+ * YTD CỘNG CẢ THÁNG ĐANG CHẠY, tới đúng ngày chốt dữ liệu — đó là nghĩa thông
+ * thường của "luỹ kế tới hôm nay", và là con số khớp khi ai đó cộng tay cả
+ * sheet nguồn.
+ *
+ * Để tỷ lệ vẫn đọc được, MẪU SỐ cũng phải cắt tương ứng: AOP của tháng đang
+ * chạy chỉ tính phần ứng với quãng đã chạy (`aopThrough`). Giữ nguyên mục tiêu
+ * trọn tháng thì tử số thiếu ngày mà mẫu số đủ tháng, tỷ lệ tụt giả tạo — càng
+ * đầu tháng càng sai nặng.
+ *
+ * Ô MTD thì khác: nó cố tình so với AOP TRỌN THÁNG vì câu hỏi ở đó là "đã đi
+ * được bao nhiêu phần mục tiêu tháng", không phải "có đang bám kịp nhịp không".
  */
 export function scopeProgress(ds: BizDataset, scope: DataScope): ScopeProgress {
   const series = monthlySeries(ds, scope);
   const latest = series[series.length - 1];
-  const running = currentMonth();
-  const isPartial = latest.month === running;
+  const isPartial = latest.month === currentMonth();
 
-  const complete = isPartial ? series.slice(0, -1) : series;
-  const ytdSource = complete.length ? complete : series;
+  const ytdGtc = series.reduce((acc, p) => acc + p.gtc, 0);
+  const ytdTarget = series.reduce((acc, p) => {
+    const target =
+      isPartial && p.month === latest.month
+        ? aopThrough(scope, p.month, ds.source.dataThrough)
+        : aopFor(scope, p.month);
+    return acc + (target ?? 0);
+  }, 0);
 
-  const ytdGtc = ytdSource.reduce((acc, p) => acc + p.gtc, 0);
-  const ytdTarget = ytdSource.reduce(
-    (acc, p) => acc + (aopFor(scope, p.month) ?? 0),
-    0,
-  );
   const mtdTarget = aopFor(scope, latest.month) ?? 0;
 
-  const first = formatMonthShort(ytdSource[0].month);
-  const last = formatMonthShort(ytdSource[ytdSource.length - 1].month);
+  const first = formatMonthShort(series[0].month);
+  const last = formatMonthShort(latest.month);
 
   return {
     ytd: {
       gtc: ytdGtc,
       target: ytdTarget,
       completion: ytdTarget === 0 ? 0 : ytdGtc / ytdTarget,
-      periodLabel: `${first}–${last}/${ytdSource[0].month.slice(0, 4)}`,
-      excludesMonth: isPartial ? latest.month : undefined,
+      periodLabel: `${first}–${last}/${series[0].month.slice(0, 4)}`,
+      proRatedMonth: isPartial ? latest.month : undefined,
     },
     mtd: {
       gtc: latest.gtc,

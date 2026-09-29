@@ -1009,3 +1009,35 @@ export function dailyFcFor(scope: DataScope, date: string): number | undefined {
     ? total.value
     : rows.reduce((acc, r) => acc + r.value, 0);
 }
+
+/**
+ * Phần AOP ứng với quãng đã chạy của một tháng chưa hết.
+ *
+ * AOP chỉ có ở mức tháng nên phải tự cắt. Cắt theo **hình dạng ngày của FC**
+ * chứ không chia đều số ngày: sản lượng các ngày trong tháng chênh nhau rất
+ * lớn (cuối tuần, ngày campaign 9.9), chia đều sẽ lệch hàng trăm nghìn đơn.
+ *
+ * Không có FC tháng đó thì lùi về tỷ lệ ngày theo lịch — kém chính xác hơn
+ * nhưng vẫn hơn là lấy nguyên mục tiêu trọn tháng.
+ *
+ * Trả về `undefined` khi không có AOP để cắt.
+ */
+export function aopThrough(
+  scope: DataScope,
+  month: string,
+  through: string,
+): number | undefined {
+  const aop = aopFor(scope, month);
+  if (aop === undefined) return undefined;
+
+  const fcAll = fcFor(scope, month);
+  const fcPart = fcThrough(scope, month, through);
+  if (fcAll !== undefined && fcAll > 0 && fcPart !== undefined) {
+    return aop * (fcPart / fcAll);
+  }
+
+  const [y, m] = month.split("-").map(Number);
+  const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const elapsed = Number(through.slice(8, 10));
+  return aop * (Math.min(elapsed, daysInMonth) / daysInMonth);
+}

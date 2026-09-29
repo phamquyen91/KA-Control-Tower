@@ -100,11 +100,13 @@ export default function BizOverview() {
             scope="SPB"
             data={payload.scopes.SPB}
             months={payload.months}
+            dataThrough={payload.source.dataThrough}
           />
           <ProgressPanel
             scope="SPE"
             data={payload.scopes.SPE}
             months={payload.months}
+            dataThrough={payload.source.dataThrough}
           />
         </div>
       </Section>
@@ -245,10 +247,12 @@ function ProgressPanel({
   scope,
   data,
   months,
+  dataThrough,
 }: {
   scope: DataScope;
   data: ScopePayload;
   months: string[];
+  dataThrough: string;
 }) {
   return (
     <div className={styles.panel}>
@@ -262,12 +266,14 @@ function ProgressPanel({
           stat={data.progress.ytd}
           spark={data.progress.spark}
           months={months}
+          dataThrough={dataThrough}
         />
         <StatCard
           title="GTTC MTD"
           stat={data.progress.mtd}
           spark={data.progress.spark}
           months={months}
+          dataThrough={dataThrough}
         />
       </div>
     </div>
@@ -279,11 +285,13 @@ function StatCard({
   stat,
   spark,
   months,
+  dataThrough,
 }: {
   title: string;
   stat: ScopePayload["progress"]["ytd"];
   spark: number[];
   months: string[];
+  dataThrough: string;
 }) {
   const ok = stat.completion >= 1;
   return (
@@ -301,12 +309,13 @@ function StatCard({
       <Sparkline values={spark} months={months} ok={ok} />
       <div className={styles.statFoot}>
         AOP cùng kỳ: {formatNumber(stat.target)}
-        {stat.excludesMonth && (
-          // Không có dòng này thì người đối chiếu cộng hết sheet sẽ ra số lớn
-          // hơn đúng bằng tháng đang chạy và tưởng app tính thiếu.
+        {stat.proRatedMonth && (
+          // AOP hiện ở đây nhỏ hơn bảng AOP gốc vì phần của tháng đang chạy đã
+          // bị cắt. Không nói ra thì bị tưởng là lấy sai mục tiêu.
           <>
             <br />
-            Chưa gồm {formatMonth(stat.excludesMonth)} đang chạy — xem ô MTD
+            Đã gồm {formatMonth(stat.proRatedMonth)} tới {dataThrough}; mục tiêu
+            tháng đó cắt theo phần đã chạy
           </>
         )}
       </div>
