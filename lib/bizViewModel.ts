@@ -67,6 +67,8 @@ interface ProgressPayload {
   target: number;
   completion: number;
   periodLabel: string;
+  /** Tháng đang chạy bị loại khỏi YTD; giao diện phải nói ra. */
+  excludesMonth?: string;
 }
 
 function buildScope(ds: BizDataset, scope: DataScope): ScopePayload {

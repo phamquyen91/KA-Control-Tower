@@ -301,6 +301,14 @@ function StatCard({
       <Sparkline values={spark} months={months} ok={ok} />
       <div className={styles.statFoot}>
         AOP cùng kỳ: {formatNumber(stat.target)}
+        {stat.excludesMonth && (
+          // Không có dòng này thì người đối chiếu cộng hết sheet sẽ ra số lớn
+          // hơn đúng bằng tháng đang chạy và tưởng app tính thiếu.
+          <>
+            <br />
+            Chưa gồm {formatMonth(stat.excludesMonth)} đang chạy — xem ô MTD
+          </>
+        )}
       </div>
     </div>
   );

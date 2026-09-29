@@ -217,6 +217,12 @@ export interface ProgressStat {
   completion: number;
   /** Nhãn kỳ, ví dụ "T1–T8/2026" hoặc "T8/2026". */
   periodLabel: string;
+  /**
+   * Tháng bị loại khỏi tổng, dạng "YYYY-MM". Chỉ có ở YTD khi tháng cuối đang
+   * chạy. Giao diện phải nói ra: người đối chiếu sẽ cộng hết sheet và thấy
+   * lệch đúng bằng tháng này, tưởng app tính sai.
+   */
+  excludesMonth?: string;
 }
 
 export interface ScopeProgress {
@@ -259,6 +265,7 @@ export function scopeProgress(ds: BizDataset, scope: DataScope): ScopeProgress {
       target: ytdTarget,
       completion: ytdTarget === 0 ? 0 : ytdGtc / ytdTarget,
       periodLabel: `${first}–${last}/${ytdSource[0].month.slice(0, 4)}`,
+      excludesMonth: isPartial ? latest.month : undefined,
     },
     mtd: {
       gtc: latest.gtc,
