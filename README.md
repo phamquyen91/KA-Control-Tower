@@ -177,6 +177,7 @@ Giao diện luôn ghi rõ đang xem live hay bản chụp, chốt tới ngày n�
 lib/sheetSource.ts   đọc sheet (JWT service account → Sheets API), cache 1h, fallback
 lib/sheetParse.ts    bóc dòng thô → cấu trúc app. MỘT đường code cho cả live lẫn chụp
 lib/snapshot/*.ts    bản chụp, sinh bằng scripts/gen-snapshot.ts — KHÔNG sửa tay
+lib/targetData.ts    FC (sinh bằng scripts/gen-fc.py — KHÔNG sửa tay) và AOP
 lib/bizData.ts       dataset tab Tình hình kinh doanh
 lib/campaignData.ts  dataset tab Campaign (+ độ chín của kỳ)
 ```
@@ -275,38 +276,38 @@ chạy 27/30 ngày nhưng FC nói 92,1% sản lượng tháng rơi vào quãng �
 
 ## Mục tiêu: FC và AOP
 
-Hai loại mục tiêu khác nhau về ý nghĩa, đừng dùng lẫn:
+Hai loại mục tiêu khác hẳn nhau về ý nghĩa:
 
-| Loại | Đối chiếu với | Nguồn |
+| | Nguồn | Đối chiếu với |
 | --- | --- | --- |
-| **FC** | Created volume | Dòng `Total` (= Pickup + Dropoff) trong các file `GHN_*_Forecast *.xlsx` |
-| **AOP** | GTTC volume | Bảng target AOP 2026 (dòng `SHOPEE` = Shopee Standard) |
+| **FC** | File forecast SPE gửi hằng tháng | Sản lượng **Created** |
+| **AOP** | Kế hoạch năm, nhập tay trong `lib/targetData.ts` | **GTTC** |
 
-Sinh ra `lib/targetData.ts` từ **toàn bộ** file forecast trong hai thư mục
-`FC SPE Bulky` và `FC SPE Express`. Hiện phủ **T1–T9/2026 cho cả hai scope**.
+### Cập nhật FC khi SPE gửi file mới
 
-Cách đọc file forecast:
+Thả file vào `~/Documents/Claude/GHN/SPE/FC SPE Bulky` hoặc `FC SPE Express`
+rồi chạy:
 
-- Dòng lấy số là `Total`, vài file cũ ghi là `Hẹn lấy`. Dòng này bằng
-  `Pickup + Dropoff` — bộ sinh **kiểm tra lại trên từng ngày của mọi file**, hiện
-  không sai lệch chỗ nào.
-- Bulky tách hai block weight thành hai sheet. **Riêng T2/2026 hai block nằm ở
-  hai file riêng**, nên nhận diện block theo tên file khi tên sheet không nói gì
-  (sheet đều tên `Allocation Forecast`).
-- Dòng lấy số còn có tên **`Orderdate`** ở một số file. Đã kiểm chứng nó bằng
-  `Pickup + Dropoff` trên từng ngày (sai số tối đa 1 đơn do làm tròn) nên dùng
-  như `Total`.
-- **Một tháng có thể có nhiều bản forecast.** Bộ sinh chọn bản phủ *nhiều ngày
-  nhất*: T4 của Standard có bản `Update0304` chỉ 28 ngày (phát hành muộn, bắt
-  đầu từ 03/04) và bản `FC_Apr2026 update 2603` đủ 30 ngày — bản đủ thắng.
-  **T4 của Bulky vẫn chỉ có bản 28 ngày**, nên FC tháng đó còn thấp hơn thực tế
-  một chút; xin bản đủ từ SPE là tự khớp.
+```bash
+python3 scripts/gen-fc.py
+```
 
-FC cho **ngày campaign** lấy từ chính các file này: CP 6.6 = 06/06 và 07/06,
-CP 7.7 = 07/07 và 08/07, CP 8.8 = 08/08 và 09/08.
+Script ghi đè cả `DAILY_FC_RAW` lẫn `FC_RAW` trong `lib/targetData.ts` —
+**đừng sửa tay hai bảng đó**. FC tháng được suy từ tổng FC ngày nên hai bảng
+không thể trôi khỏi nhau.
 
-AOP chép tay từ bảng target nên đã tự kiểm tra: mọi tháng `10-15kg + 15kg++` khớp
-đúng dòng tổng Bulky, và tổng 12 tháng khớp cột FY (lệch 1 đơn vị do làm tròn).
+Script tự xử ba chỗ mà làm tay từng sai:
+
+- **Khuôn file không cố định.** Dòng sản lượng khi thì tên `Total`, khi
+  `Hẹn lấy`, khi `Orderdate`, có bản ghi `Total (PU + DO)`. Script dò theo
+  nhãn, và kiểm lại dòng đó bằng `Pickup + Dropoff` trên **từng ngày** — lệch
+  thì dừng hẳn thay vì nạp số sai.
+- **Trùng tháng.** Chọn bản có nhiều ngày nhất, hoà thì lấy bản sửa sau.
+- **Block weight.** Đọc từ tên sheet, không có thì lùi về tên file (tháng
+  2/2026 hai block nằm ở hai file riêng).
+
+Phủ hiện tại **T1–T10/2026** cho cả hai scope. Riêng T4 Bulky nguồn chỉ có từ
+03/04 nên thiếu 2 ngày đầu — đặc điểm của file, không phải lỗi bóc.
 
 ### Hai chart tính mức hoàn thành theo hai cách khác nhau — có chủ đích
 

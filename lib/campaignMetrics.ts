@@ -92,11 +92,15 @@ export interface CampaignRow {
   /**
    * Sản lượng hẹn lấy (tab `DD OPR`) — đây mới là "sản lượng" của kỳ, và là
    * thứ duy nhất cùng phạm vi với FC.
+   *
+   * `null` = nguồn chưa có dòng nào cho ngày đó, thường vì ngày đó chưa tới
+   * (D+1 của kỳ vừa diễn ra). Phải phân biệt với 0: để 0 thì mức hoàn thành
+   * FC ra 0% và bị đọc thành hụt sạch chỉ tiêu.
    */
-  volumeD0: number;
-  volumeD1: number;
-  /** Sản lượng hẹn lấy trung bình một ngày thường. */
-  baselineVolumeD0: number;
+  volumeD0: number | null;
+  volumeD1: number | null;
+  /** Sản lượng hẹn lấy trung bình một ngày thường; null khi kỳ đó không có baseline. */
+  baselineVolumeD0: number | null;
   /** Mẫu GIAO (tab `DD`) — chỉ dùng lấy ODR, đừng đọc `orders` như sản lượng. */
   cpD0: OdrCell;
   cpD1: OdrCell;
@@ -127,9 +131,9 @@ export function campaignRows(ds: CampaignDataset, scope: DataScope): CampaignRow
     const pickD0 = oprCell(ds, scope, campaign, "CP", "D0");
     const pickD1 = oprCell(ds, scope, campaign, "CP", "D+1");
     const pickBase = oprCell(ds, scope, campaign, "baseline", "D0");
-    const volumeD0 = pickD0?.orders ?? 0;
-    const volumeD1 = pickD1?.orders ?? 0;
-    const baselineVolumeD0 = pickBase?.orders ?? 0;
+    const volumeD0 = pickD0?.orders ?? null;
+    const volumeD1 = pickD1?.orders ?? null;
+    const baselineVolumeD0 = pickBase?.orders ?? null;
     const days = campaignDays(ds, campaign);
     return {
       campaign,
@@ -140,12 +144,18 @@ export function campaignRows(ds: CampaignDataset, scope: DataScope): CampaignRow
       cpD1,
       baselineD0,
       liftVsBaseline:
-        ds.baselinePerDay && baselineVolumeD0 > 0
+        ds.baselinePerDay && volumeD0 !== null && baselineVolumeD0
           ? volumeD0 / baselineVolumeD0
           : null,
       oprD0: pickD0,
-      fcD0: completion(volumeD0, days && dailyFcFor(scope, days.d0)),
-      fcD1: completion(volumeD1, days && dailyFcFor(scope, days.d1)),
+      fcD0:
+        volumeD0 === null
+          ? null
+          : completion(volumeD0, days && dailyFcFor(scope, days.d0)),
+      fcD1:
+        volumeD1 === null
+          ? null
+          : completion(volumeD1, days && dailyFcFor(scope, days.d1)),
       date: days?.d0,
       settled: isSettled(ds, campaign),
     };

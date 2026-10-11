@@ -289,13 +289,13 @@ function VolumeCard({
     {
       key: "d0",
       label: "Ngày D",
-      value: r.volumeD0,
+      value: r.volumeD0 ?? 0,
       className: chart.barLowWarm,
     },
     {
       key: "d1",
       label: "Ngày D+1",
-      value: r.volumeD1,
+      value: r.volumeD1 ?? 0,
       className: chart.barLow,
     },
   ]);
@@ -457,8 +457,10 @@ function PeriodCard({
                     <span className={styles.badgeSettling}>chưa chốt</span>
                   )}
                 </th>
-                <td>{formatNumber(r.volumeD0)}</td>
-                <td>{formatNumber(r.volumeD1)}</td>
+                {/* Ngày chưa tới thì để trống, không hiện 0 — 0 đọc thành
+                    "không có đơn nào" thay vì "chưa có số". */}
+                <td>{r.volumeD0 === null ? "—" : formatNumber(r.volumeD0)}</td>
+                <td>{r.volumeD1 === null ? "—" : formatNumber(r.volumeD1)}</td>
                 {hasLift && (
                   <td>
                     {r.liftVsBaseline === null
